@@ -107,10 +107,7 @@
   /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      5. Sync state flag
   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  let lastSyncedAt = 0;
-  let lastSeekSyncAt = 0;           // longer quiet for seek-resume echo prevention
-  const SEEK_RESUME_QUIET_MS = 2500; // seek buffering can take >300ms
-  const SYNC_QUIET_MS = 300;
+  let syncedUntil = 0; // absolute timestamp — events suppressed while Date.now() < syncedUntil
   let mySocketId = null;
   let isHost = false;
 
@@ -168,30 +165,25 @@
     let playCallbacks  = [];
     let pauseCallbacks = [];
     let seekCallbacks  = [];
-    let seekJustFired  = false;
+    let justLocalSeeked  = false;
     let lastState      = -1;
     let lastTime       = 0;
 
     ytPlayer.addEventListener('onStateChange', (e) => {
       const state = e.data;
       const t     = ytPlayer.getCurrentTime();
-      const quiet = Date.now() - lastSyncedAt < SYNC_QUIET_MS;
+      if (Date.now() < syncedUntil) { lastTime = t; lastState = state; return; }
 
-      if (!quiet) {
-        if (Math.abs(t - lastTime) > 1.5 && state !== YT.PlayerState.ENDED) {
-          seekCallbacks.forEach(cb => cb(t));
-          seekJustFired = true;
-        }
-        if (state === YT.PlayerState.PLAYING && lastState !== YT.PlayerState.PLAYING) {
-          const suppressPlay = seekJustFired || (Date.now() - lastSeekSyncAt) < SEEK_RESUME_QUIET_MS;
-          if (!suppressPlay) playCallbacks.forEach(cb => cb(t));
-          seekJustFired = false;
-        } else if (state === YT.PlayerState.PAUSED && lastState !== YT.PlayerState.PAUSED) {
-          if ((Date.now() - lastSeekSyncAt) >= SEEK_RESUME_QUIET_MS) {
-            pauseCallbacks.forEach(cb => cb(t));
-          }
-          seekJustFired = false;
-        }
+      if (Math.abs(t - lastTime) > 1.5 && state !== YT.PlayerState.ENDED) {
+        seekCallbacks.forEach(cb => cb(t));
+        justLocalSeeked = true;
+      }
+      if (state === YT.PlayerState.PLAYING && lastState !== YT.PlayerState.PLAYING) {
+        if (!justLocalSeeked) playCallbacks.forEach(cb => cb(t));
+        justLocalSeeked = false;
+      } else if (state === YT.PlayerState.PAUSED && lastState !== YT.PlayerState.PAUSED) {
+        pauseCallbacks.forEach(cb => cb(t));
+        justLocalSeeked = false;
       }
       lastTime  = t;
       lastState = state;
@@ -237,9 +229,9 @@
         let pauseCallbacks = [];
         let seekCallbacks  = [];
 
-        vp.on('play',   () => { if (Date.now() - lastSyncedAt >= SYNC_QUIET_MS && Date.now() - lastSeekSyncAt >= SEEK_RESUME_QUIET_MS) { vp.getCurrentTime().then(t => playCallbacks.forEach(cb => cb(t))); } });
-        vp.on('pause',  () => { if (Date.now() - lastSyncedAt >= SYNC_QUIET_MS) { vp.getCurrentTime().then(t => pauseCallbacks.forEach(cb => cb(t))); } });
-        vp.on('seeked', () => { if (Date.now() - lastSyncedAt >= SYNC_QUIET_MS) { vp.getCurrentTime().then(t => seekCallbacks.forEach(cb => cb(t))); } });
+        vp.on('play',   () => { if (Date.now() >= syncedUntil ) { vp.getCurrentTime().then(t => playCallbacks.forEach(cb => cb(t))); } });
+        vp.on('pause',  () => { if (Date.now() >= syncedUntil) { vp.getCurrentTime().then(t => pauseCallbacks.forEach(cb => cb(t))); } });
+        vp.on('seeked', () => { if (Date.now() >= syncedUntil) { vp.getCurrentTime().then(t => seekCallbacks.forEach(cb => cb(t))); } });
 
         resolve({
           play(t)  {
@@ -294,16 +286,16 @@
 
     vid.addEventListener('play', () => {
       playIcon.textContent = 'â¸';
-      if (Date.now() - lastSyncedAt >= SYNC_QUIET_MS) playCallbacks.forEach(cb => cb(vid.currentTime));
+      if (Date.now() >= syncedUntil) playCallbacks.forEach(cb => cb(vid.currentTime));
     });
 
     vid.addEventListener('pause', () => {
       playIcon.textContent = 'â–¶';
-      if (Date.now() - lastSyncedAt >= SYNC_QUIET_MS) pauseCallbacks.forEach(cb => cb(vid.currentTime));
+      if (Date.now() >= syncedUntil) pauseCallbacks.forEach(cb => cb(vid.currentTime));
     });
 
     vid.addEventListener('seeked', () => {
-      if (Date.now() - lastSyncedAt >= SYNC_QUIET_MS) {
+      if (Date.now() >= syncedUntil) {
         if (Math.abs(vid.currentTime - lastSeekTime) > 0.5) {
           seekCallbacks.forEach(cb => cb(vid.currentTime));
         }
@@ -381,7 +373,7 @@
         return;
       }
 
-      if (Date.now() - lastSyncedAt < SYNC_QUIET_MS) return;
+      if (Date.now() < syncedUntil) return;
       if (data.event === 'play')  playCallbacks.forEach(cb  => cb(data.currentTime));
       if (data.event === 'pause') pauseCallbacks.forEach(cb => cb(data.currentTime));
       if (data.event === 'seek')  seekCallbacks.forEach(cb  => cb(data.currentTime));
@@ -409,7 +401,7 @@
      7. Initialise / re-initialise the player
   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   async function initPlayer(url, startTime, autoplay) {
-    lastSyncedAt = Date.now(); // suppress player init events
+    syncedUntil = Date.now() + 2000; // 2s grace for player init events
     // Tear down previous player state
     customControls.hidden = true;
     iframeWarning.hidden  = true;
@@ -470,17 +462,17 @@
     if (!player) return;
 
     player.onPlay((t) => {
-      if (Date.now() - lastSyncedAt < SYNC_QUIET_MS) return;
+      if (Date.now() < syncedUntil) return;
       socket.emit('play', { roomId, currentTime: t });
     });
 
     player.onPause((t) => {
-      if (Date.now() - lastSyncedAt < SYNC_QUIET_MS) return;
+      if (Date.now() < syncedUntil) return;
       socket.emit('pause', { roomId, currentTime: t });
     });
 
     player.onSeek((t) => {
-      if (Date.now() - lastSyncedAt < SYNC_QUIET_MS) return;
+      if (Date.now() < syncedUntil) return;
       socket.emit('seek', { roomId, currentTime: t });
     });
   }
@@ -533,8 +525,8 @@
   // â”€â”€ sync-play â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   socket.on('sync-play', ({ currentTime }) => {
     if (!player) return;
-    lastSyncedAt = Date.now();
-    lastSeekSyncAt = 0; // explicit play clears seek-resume suppression
+    syncedUntil = Date.now() + 500;
+    
     player.play(currentTime);
 
   });
@@ -542,7 +534,7 @@
   // â”€â”€ sync-pause â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   socket.on('sync-pause', ({ currentTime }) => {
     if (!player) return;
-    lastSyncedAt = Date.now();
+    syncedUntil = Date.now() + 500;
     player.pause(currentTime);
 
   });
@@ -550,8 +542,8 @@
   // â”€â”€ sync-seek â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   socket.on('sync-seek', ({ currentTime }) => {
     if (!player) return;
-    lastSyncedAt = Date.now();
-    lastSeekSyncAt = Date.now();
+    syncedUntil = Date.now() + 3000; // seek needs longer (buffering);
+    
     player.seekTo(currentTime);
 
   });

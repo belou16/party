@@ -108,7 +108,7 @@
      5. Sync state flag
   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   let lastSyncedAt = 0;
-  const SYNC_QUIET_MS = 600;
+  const SYNC_QUIET_MS = 300;
   let mySocketId = null;
   let isHost = false;
 
@@ -170,21 +170,21 @@
     let lastTime       = 0;
 
     ytPlayer.addEventListener('onStateChange', (e) => {
-      if (Date.now() - lastSyncedAt < SYNC_QUIET_MS) return;
       const state = e.data;
       const t     = ytPlayer.getCurrentTime();
+      const quiet = Date.now() - lastSyncedAt < SYNC_QUIET_MS;
 
-      // Seek detection: if time jumped significantly while paused or playing
-      if (Math.abs(t - lastTime) > 1.5 && state !== YT.PlayerState.ENDED) {
-        seekCallbacks.forEach(cb => cb(t));
+      if (!quiet) {
+        if (Math.abs(t - lastTime) > 1.5 && state !== YT.PlayerState.ENDED) {
+          seekCallbacks.forEach(cb => cb(t));
+        }
+        if (state === YT.PlayerState.PLAYING && lastState !== YT.PlayerState.PLAYING) {
+          playCallbacks.forEach(cb => cb(t));
+        } else if (state === YT.PlayerState.PAUSED && lastState !== YT.PlayerState.PAUSED) {
+          pauseCallbacks.forEach(cb => cb(t));
+        }
       }
-      lastTime = t;
-
-      if (state === YT.PlayerState.PLAYING && lastState !== YT.PlayerState.PLAYING) {
-        playCallbacks.forEach(cb => cb(t));
-      } else if (state === YT.PlayerState.PAUSED && lastState !== YT.PlayerState.PAUSED) {
-        pauseCallbacks.forEach(cb => cb(t));
-      }
+      lastTime  = t;
       lastState = state;
     });
 
@@ -340,7 +340,7 @@
   // The server fetches the target page, strips X-Frame-Options / CSP, and
   // injects doro-sync.js which hooks into the page's <video> element and
   // communicates back via postMessage.
-  function createIframePlayer(url) {
+  function createIframePlayer(url, startTime, autoplay) {
     const proxyUrl = '/proxy?url=' + encodeURIComponent(url);
 
     playerContainer.innerHTML = `<iframe
@@ -367,6 +367,8 @@
 
       if (data.event === 'ready') {
         iframeWarning.hidden = true;
+        if (autoplay) { postCmd('play', startTime || 0); }
+        else if (startTime > 0) { postCmd('seek', startTime); }
         return;
       }
 
@@ -398,6 +400,7 @@
      7. Initialise / re-initialise the player
   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   async function initPlayer(url, startTime, autoplay) {
+    lastSyncedAt = Date.now(); // suppress player init events
     // Tear down previous player state
     customControls.hidden = true;
     iframeWarning.hidden  = true;
@@ -419,13 +422,13 @@
     switch (type) {
       case 'youtube': {
         const vid = extractYouTubeId(url);
-        if (!vid) { player = await createIframePlayer(url); break; }
+        if (!vid) { player = await createIframePlayer(url, startTime, autoplay); break; }
         player = await createYouTubePlayer(vid, startTime, autoplay);
         break;
       }
       case 'vimeo': {
         const vid = extractVimeoId(url);
-        if (!vid) { player = await createIframePlayer(url); break; }
+        if (!vid) { player = await createIframePlayer(url, startTime, autoplay); break; }
         player = await createVimeoPlayer(vid, startTime, autoplay);
         break;
       }
@@ -437,14 +440,14 @@
           const data = await resp.json();
           if (data.embedUrl) embedUrl = data.embedUrl;
         } catch (_) {}
-        player = await createIframePlayer(embedUrl);
+        player = await createIframePlayer(embedUrl, startTime, autoplay);
         break;
       }
       case 'direct':
         player = await createDirectPlayer(url, startTime, autoplay);
         break;
       default:
-        player = await createIframePlayer(url);
+        player = await createIframePlayer(url, startTime, autoplay);
         break;
     }
 

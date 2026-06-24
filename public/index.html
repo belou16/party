@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Doro Party — Watch Together, Anywhere</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body class="landing-page">
+
+  <div class="landing-container">
+    <header class="landing-header">
+      <div class="logo">
+        <span class="logo-emoji">🎬</span>
+        <span class="logo-text">Doro Party</span>
+      </div>
+      <p class="tagline">Watch together, anywhere.</p>
+    </header>
+
+    <main class="landing-main">
+      <div class="card create-card">
+        <h2 class="card-title">Start a Watch Party</h2>
+        <p class="card-subtitle">Paste any video link and invite your friends.</p>
+
+        <form id="create-form" class="create-form" novalidate>
+          <div class="form-group">
+            <label for="username-input" class="form-label">Your name</label>
+            <input
+              id="username-input"
+              type="text"
+              class="form-input"
+              placeholder="e.g. Alex"
+              maxlength="32"
+              autocomplete="off"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="url-input" class="form-label">Video URL</label>
+            <input
+              id="url-input"
+              type="url"
+              class="form-input"
+              placeholder="https://youtube.com/watch?v=... or direct .mp4 link"
+              autocomplete="off"
+              required
+            />
+          </div>
+
+          <div id="form-error" class="form-error" hidden></div>
+
+          <button type="submit" class="btn btn-primary btn-lg btn-full">
+            <span class="btn-icon">🎉</span>
+            Create Party
+          </button>
+        </form>
+      </div>
+
+      <div class="supported-urls">
+        <h3 class="supported-title">Supported video sources</h3>
+        <ul class="supported-list">
+          <li class="supported-item">
+            <span class="supported-icon supported-yt">▶</span>
+            <div>
+              <strong>YouTube</strong>
+              <span class="supported-example">youtube.com/watch?v=… · youtu.be/…</span>
+            </div>
+          </li>
+          <li class="supported-item">
+            <span class="supported-icon supported-vm">V</span>
+            <div>
+              <strong>Vimeo</strong>
+              <span class="supported-example">vimeo.com/…</span>
+            </div>
+          </li>
+          <li class="supported-item">
+            <span class="supported-icon supported-file">▦</span>
+            <div>
+              <strong>Direct video files</strong>
+              <span class="supported-example">.mp4 · .webm · .ogg · .m3u8</span>
+            </div>
+          </li>
+          <li class="supported-item">
+            <span class="supported-icon supported-other">⊞</span>
+            <div>
+              <strong>Other URLs</strong>
+              <span class="supported-example">Embedded via iframe (may be blocked by the site)</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </main>
+
+    <footer class="landing-footer">
+      <p>No sign-up required. Rooms reset when everyone leaves.</p>
+    </footer>
+  </div>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>

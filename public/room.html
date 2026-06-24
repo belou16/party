@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Doro Party — Watch Room</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body class="room-page">
+
+  <!-- ── Username prompt modal ─────────────────────────────────────────── -->
+  <div id="username-modal" class="modal-backdrop" hidden>
+    <div class="modal">
+      <div class="modal-logo">
+        <span class="logo-emoji">🎬</span>
+        <span class="logo-text">Doro Party</span>
+      </div>
+      <h2 class="modal-title">What's your name?</h2>
+      <p class="modal-subtitle">Others in the room will see this.</p>
+      <form id="username-form" novalidate>
+        <input
+          id="modal-username-input"
+          type="text"
+          class="form-input"
+          placeholder="Enter your name"
+          maxlength="32"
+          autocomplete="off"
+          required
+        />
+        <div id="modal-error" class="form-error" hidden></div>
+        <button type="submit" class="btn btn-primary btn-full" style="margin-top:1rem">
+          Join Party
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Change video modal (host only) ────────────────────────────────── -->
+  <div id="video-modal" class="modal-backdrop" hidden>
+    <div class="modal">
+      <h2 class="modal-title">Change Video</h2>
+      <p class="modal-subtitle">Paste a new video URL. All viewers will switch.</p>
+      <form id="video-form" novalidate>
+        <input
+          id="modal-video-input"
+          type="url"
+          class="form-input"
+          placeholder="https://..."
+          autocomplete="off"
+          required
+        />
+        <div id="video-modal-error" class="form-error" hidden></div>
+        <div class="modal-actions">
+          <button type="button" id="video-modal-cancel" class="btn btn-ghost">Cancel</button>
+          <button type="submit" class="btn btn-primary">Change Video</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Room layout ────────────────────────────────────────────────────── -->
+  <div class="room-layout">
+
+    <!-- LEFT: video panel -->
+    <div class="video-panel">
+
+      <!-- top bar -->
+      <div class="room-topbar">
+        <a href="/" class="btn btn-ghost btn-sm topbar-home" title="Back to home">
+          ← Home
+        </a>
+        <div class="room-id-area">
+          <span class="room-id-label">Room:</span>
+          <code id="room-id-display" class="room-id-code"></code>
+        </div>
+        <div class="topbar-actions">
+          <button id="copy-link-btn" class="btn btn-ghost btn-sm">
+            🔗 Copy Link
+          </button>
+          <button id="change-video-btn" class="btn btn-accent btn-sm" hidden>
+            ✏️ Change Video
+          </button>
+        </div>
+      </div>
+
+      <!-- video wrapper -->
+      <div class="video-wrapper">
+        <div id="player-container" class="player-container">
+          <!-- player injected here by room.js -->
+          <div class="player-placeholder">
+            <span class="placeholder-icon">🎬</span>
+            <p>Loading video…</p>
+          </div>
+        </div>
+
+        <!-- iframe embed warning banner -->
+        <div id="iframe-warning" class="iframe-warning" hidden>
+          ⚠️ This site may block embedding. For best results, use YouTube, Vimeo, or a direct video URL.
+        </div>
+      </div>
+
+      <!-- custom controls (shown only for direct video) -->
+      <div id="custom-controls" class="custom-controls" hidden>
+        <button id="ctrl-play-pause" class="ctrl-btn ctrl-play" title="Play / Pause">
+          <span id="play-icon">▶</span>
+        </button>
+        <span id="ctrl-time" class="ctrl-time">0:00 / 0:00</span>
+        <input id="ctrl-seek" type="range" class="ctrl-seek" min="0" max="100" step="0.1" value="0" />
+        <div class="ctrl-volume-group">
+          <button id="ctrl-mute" class="ctrl-btn ctrl-mute" title="Mute">🔊</button>
+          <input id="ctrl-volume" type="range" class="ctrl-volume" min="0" max="1" step="0.02" value="1" />
+        </div>
+      </div>
+
+    </div><!-- /video-panel -->
+
+    <!-- RIGHT: chat/users panel -->
+    <aside class="chat-panel">
+
+      <div class="chat-panel-header">
+        <span class="chat-panel-logo">🎬</span>
+        <span class="chat-panel-title">Watching Party</span>
+      </div>
+
+      <!-- users list -->
+      <div class="users-section">
+        <div class="section-label">In the room</div>
+        <ul id="users-list" class="users-list">
+          <!-- populated by room.js -->
+        </ul>
+      </div>
+
+      <!-- chat messages -->
+      <div class="chat-section">
+        <div class="section-label">Chat</div>
+        <div id="chat-messages" class="chat-messages">
+          <!-- messages appended here -->
+        </div>
+      </div>
+
+      <!-- chat input -->
+      <div class="chat-input-area">
+        <input
+          id="chat-input"
+          type="text"
+          class="chat-input"
+          placeholder="Send a message…"
+          maxlength="500"
+          autocomplete="off"
+        />
+        <button id="chat-send-btn" class="btn btn-primary btn-sm chat-send">Send</button>
+      </div>
+
+    </aside><!-- /chat-panel -->
+
+  </div><!-- /room-layout -->
+
+  <!-- Socket.io client (served automatically by socket.io) -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/room.js"></script>
+</body>
+</html>

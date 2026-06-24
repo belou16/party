@@ -14,16 +14,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/api/rumble-embed', (req, res) => {
   const rawUrl = req.query.url;
   if (!rawUrl) return res.status(400).json({ error: 'Missing url' });
-
-  const oembedUrl =
-    'https://rumble.com/api/Media/oembed.json?url=' + encodeURIComponent(rawUrl);
-
+  const oembedUrl = 'https://rumble.com/api/Media/oembed.json?url=' + encodeURIComponent(rawUrl);
   const req2 = https.request(oembedUrl, {
-    method:  'GET',
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; WatchParty/1.0)',
-      'Accept':     'application/json',
-    },
+    method: 'GET',
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; WatchParty/1.0)', 'Accept': 'application/json' },
     timeout: 8000,
   }, (r) => {
     let body = '';
@@ -31,31 +25,26 @@ app.get('/api/rumble-embed', (req, res) => {
     r.on('end', () => {
       try {
         const json = JSON.parse(body);
-        const m    = json.html && json.html.match(/\/embed\/(v[a-z0-9]+)/i);
+        const m = json.html && json.html.match(/\/embed\/(v[a-z0-9]+)/i);
         if (m) return res.json({ embedId: m[1], embedUrl: 'https://rumble.com/embed/' + m[1] + '/' });
         res.status(404).json({ error: 'Embed ID not found' });
-      } catch (_) {
-        res.status(502).json({ error: 'Invalid oEmbed response' });
-      }
+      } catch (_) { res.status(502).json({ error: 'Invalid oEmbed response' }); }
     });
   });
-  req2.on('error', e  => res.status(502).json({ error: e.message }));
+  req2.on('error', e => res.status(502).json({ error: e.message }));
   req2.on('timeout', () => { req2.destroy(); res.status(504).json({ error: 'Timeout' }); });
   req2.end();
 });
 
 const rooms = new Map();
+// nom par socket (pour les logs)
+const socketNames = new Map();
 
 function getRoom(roomId) {
   if (!rooms.has(roomId)) {
     rooms.set(roomId, {
-      isPlaying:     false,
-      position:      0,
-      lastUpdatedAt: Date.now(),
-      hostId:        null,
-      mode:          'direct',
-      videoId:       null,
-      embedUrl:      null,
+      isPlaying: false, position: 0, lastUpdatedAt: Date.now(),
+      hostId: null, mode: 'direct', videoId: null, embedUrl: null,
     });
   }
   return rooms.get(roomId);
@@ -69,17 +58,24 @@ function getProjectedPosition(room) {
 io.on('connection', (socket) => {
   let joinedRoom = null;
 
-  socket.on('join', ({ roomId }) => {
+  socket.on('join', ({ roomId, name }) => {
     if (!roomId) return;
     if (joinedRoom) socket.leave(joinedRoom);
     joinedRoom = roomId;
     socket.join(roomId);
 
+    const displayName = String(name || 'Viewer').slice(0, 30);
+    socketNames.set(socket.id, displayName);
+
     const room = getRoom(roomId);
-    if (!room.hostId) {
+    const isNewHost = !room.hostId;
+    if (isNewHost) {
       room.hostId = socket.id;
       socket.emit('you_are_host');
     }
+
+    // Log "X a rejoint" pour tous ceux déjà dans la room
+    socket.to(roomId).emit('system_msg', { msg: displayName + ' a rejoint la room 👋' });
 
     socket.emit('sync', {
       isPlaying: room.isPlaying,
@@ -140,12 +136,8 @@ io.on('connection', (socket) => {
     if (!roomId) return;
     const room = getRoom(roomId);
     Object.assign(room, {
-      mode:          mode     || 'direct',
-      videoId:       videoId  || null,
-      embedUrl:      embedUrl || null,
-      position:      0,
-      isPlaying:     false,
-      lastUpdatedAt: Date.now(),
+      mode: mode || 'direct', videoId: videoId || null, embedUrl: embedUrl || null,
+      position: 0, isPlaying: false, lastUpdatedAt: Date.now(),
     });
     io.to(roomId).emit('video_set', { url, mode, videoId, embedUrl });
   });
@@ -155,16 +147,23 @@ io.on('connection', (socket) => {
     const room = rooms.get(joinedRoom);
     if (!room) return;
 
+    const displayName = socketNames.get(socket.id) || 'Viewer';
+    socketNames.delete(socket.id);
+
     const members = io.sockets.adapter.rooms.get(joinedRoom);
     const count   = members?.size ?? 0;
     io.to(joinedRoom).emit('viewer_count', { count });
+
+    if (count > 0) {
+      io.to(joinedRoom).emit('system_msg', { msg: displayName + ' a quitté la room 👋' });
+    }
 
     if (room.hostId === socket.id) {
       if (count > 0) {
         const newHostId = [...members][0];
         room.hostId     = newHostId;
         io.to(newHostId).emit('you_are_host');
-        io.to(joinedRoom).emit('system_msg', { msg: '👑 Host parti — nouveau host assigné.' });
+        io.to(joinedRoom).emit('system_msg', { msg: '👑 ' + (socketNames.get(newHostId) || 'Quelqu\'un') + ' est maintenant le host.' });
       } else {
         rooms.delete(joinedRoom);
       }

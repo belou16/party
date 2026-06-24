@@ -512,7 +512,11 @@
         <span id="reconnect-badge" class="badge">⚠️ Reconnecting…</span>
       </div>
       <div class="topbar-right">
-        <button id="share-btn" onclick="shareRoom()">🔗 Inviter un ami</button>
+        <button id="share-btn" onclick="shareRoom()">🔗 Inviter</button>
+        <button id="quit-btn"  onclick="quitRoom()"
+                style="background:none;border:1px solid var(--border);color:var(--text-muted);font-size:12px;padding:5px 12px;border-radius:var(--radius-pill);cursor:pointer;">
+          Quitter
+        </button>
         <span id="viewer-count">👥 1</span>
       </div>
     </div>
@@ -966,6 +970,16 @@
 
       syncMgr = new WatchPartySync({ videoEl: video, socket: socket, roomId: roomId });
 
+      // Seek guest to the correct position when joining mid-video
+      if (syncData.position > 1 || syncData.isPlaying) {
+        syncMgr._apply({
+          isPlaying: syncData.isPlaying,
+          position:  syncData.isPlaying
+            ? syncData.position + (Date.now() - syncData.sentAt) / 1000
+            : syncData.position,
+        });
+      }
+
       document.getElementById('overlay-btn').addEventListener('click', function() {
         document.getElementById('play-overlay').style.display = 'none';
         if (syncMgr) syncMgr._onUserGesture();
@@ -1070,25 +1084,53 @@
   }
 
   /* ══════════════════════════════════════════════════════════════
+     QUITTER LA ROOM
+  ══════════════════════════════════════════════════════════════ */
+  var _activeSocket = null;
+  var _intentionalDisconnect = false;
+
+  function quitRoom() {
+    _intentionalDisconnect = true;
+    if (_activeSocket) { _activeSocket.disconnect(); _activeSocket = null; }
+    if (syncMgr)   { syncMgr.destroy();   syncMgr   = null; }
+    if (iframeMgr) { iframeMgr.destroy(); iframeMgr = null; }
+    var video = document.getElementById('video-direct');
+    video.pause(); video.src = '';
+    document.getElementById('video-iframe').src = 'about:blank';
+    document.getElementById('chat-messages').innerHTML = '';
+    document.getElementById('reconnect-badge').style.display = 'none';
+    document.getElementById('host-badge').style.display = 'none';
+    document.getElementById('player-screen').style.display = 'none';
+    document.getElementById('join-screen').style.display   = 'flex';
+    _roomId = null;
+    _intentionalDisconnect = false;
+    history.replaceState(null, '', location.pathname);
+  }
+
+  /* ══════════════════════════════════════════════════════════════
      startSession — connexion socket + gestion sync
   ══════════════════════════════════════════════════════════════ */
   function startSession(name, roomId, rawUrl, detected, durationSec) {
     var socket       = io();
     var connected    = false;
     var playerLoaded = false;
+    _activeSocket    = socket;
 
     socket.on('connect', function() {
-      socket.emit('join', { roomId: roomId });
+      socket.emit('join', { roomId: roomId, name: name });
 
       if (connected) {
         // Reconnexion
         document.getElementById('reconnect-badge').style.display = 'none';
         addMessage('system','','✅ Reconnecté.','');
+      } else {
+        addMessage('system','','👋 Tu as rejoint la room.','');
       }
       connected = true;
     });
 
     socket.on('disconnect', function() {
+      if (_intentionalDisconnect) return;
       document.getElementById('reconnect-badge').style.display = 'inline-flex';
       addMessage('system','','Connexion perdue, reconnexion…','');
     });

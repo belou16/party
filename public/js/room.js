@@ -1,13 +1,13 @@
-/* ═══════════════════════════════════════════════════════════════════════════
-   Doro Party — Room logic (room.js)
-   ═══════════════════════════════════════════════════════════════════════════ */
+﻿/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   Doro Party â€” Room logic (room.js)
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 (function () {
   'use strict';
 
-  /* ─────────────────────────────────────────────────────────────────────────
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      1. Parse URL params
-  ───────────────────────────────────────────────────────────────────────── */
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const pathParts = window.location.pathname.split('/');
   const roomId    = pathParts[pathParts.length - 1];
 
@@ -15,9 +15,9 @@
   let   videoUrl = params.get('url')      || '';
   let   username = params.get('username') || '';
 
-  /* ─────────────────────────────────────────────────────────────────────────
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      2. DOM references
-  ───────────────────────────────────────────────────────────────────────── */
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const roomIdDisplay    = document.getElementById('room-id-display');
   const copyLinkBtn      = document.getElementById('copy-link-btn');
   const changeVideoBtn   = document.getElementById('change-video-btn');
@@ -47,18 +47,18 @@
   const videoModalError  = document.getElementById('video-modal-error');
   const videoModalCancel = document.getElementById('video-modal-cancel');
 
-  /* ─────────────────────────────────────────────────────────────────────────
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      3. Room ID display & copy link
-  ───────────────────────────────────────────────────────────────────────── */
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   roomIdDisplay.textContent = roomId;
 
   copyLinkBtn.addEventListener('click', () => {
     const url = `${window.location.origin}/room/${roomId}`;
     navigator.clipboard.writeText(url).then(() => {
-      copyLinkBtn.textContent = '✓ Copied!';
+      copyLinkBtn.textContent = 'âœ“ Copied!';
       copyLinkBtn.classList.add('btn-copied');
       setTimeout(() => {
-        copyLinkBtn.textContent = '🔗 Copy Link';
+        copyLinkBtn.textContent = 'ðŸ”— Copy Link';
         copyLinkBtn.classList.remove('btn-copied');
       }, 2000);
     }).catch(() => {
@@ -67,9 +67,9 @@
     });
   });
 
-  /* ─────────────────────────────────────────────────────────────────────────
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      4. Video type detection
-  ───────────────────────────────────────────────────────────────────────── */
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   function detectVideoType(url) {
     if (!url) return 'unknown';
     try { new URL(url); } catch (_) { return 'unknown'; }
@@ -96,21 +96,21 @@
     return m ? m[1] : null;
   }
 
-  /* ─────────────────────────────────────────────────────────────────────────
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      5. Sync state flag
-  ───────────────────────────────────────────────────────────────────────── */
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   let isSyncing = false;
   let mySocketId = null;
   let isHost = false;
 
-  /* ─────────────────────────────────────────────────────────────────────────
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      6. Player adapter
      Each type exposes: play(t), pause(t), seekTo(t), getCurrentTime(),
                         getDuration(), onPlay(cb), onPause(cb), onSeek(cb)
-  ───────────────────────────────────────────────────────────────────────── */
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   let player = null; // current adapter
 
-  // ── 6a. YouTube adapter ──────────────────────────────────────────────────
+  // â”€â”€ 6a. YouTube adapter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function createYouTubePlayer(videoId, startTime, autoplay) {
     playerContainer.innerHTML = '<div id="yt-player"></div>';
     playerContainer.classList.add('aspect-16-9');
@@ -191,7 +191,7 @@
     };
   }
 
-  // ── 6b. Vimeo adapter ───────────────────────────────────────────────────
+  // â”€â”€ 6b. Vimeo adapter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function createVimeoPlayer(vimeoId, startTime, autoplay) {
     playerContainer.innerHTML = `<iframe id="vimeo-iframe"
       src="https://player.vimeo.com/video/${vimeoId}?autoplay=${autoplay ? 1 : 0}&title=0&byline=0&portrait=0"
@@ -244,7 +244,7 @@
     });
   }
 
-  // ── 6c. Direct video adapter ─────────────────────────────────────────────
+  // â”€â”€ 6c. Direct video adapter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function createDirectPlayer(url, startTime, autoplay) {
     playerContainer.innerHTML = `<video id="video-player" src="${escapeHtml(url)}" preload="metadata"></video>`;
     playerContainer.classList.remove('aspect-16-9');
@@ -275,12 +275,12 @@
     });
 
     vid.addEventListener('play', () => {
-      playIcon.textContent = '⏸';
+      playIcon.textContent = 'â¸';
       if (!isSyncing) playCallbacks.forEach(cb => cb(vid.currentTime));
     });
 
     vid.addEventListener('pause', () => {
-      playIcon.textContent = '▶';
+      playIcon.textContent = 'â–¶';
       if (!isSyncing) pauseCallbacks.forEach(cb => cb(vid.currentTime));
     });
 
@@ -306,13 +306,13 @@
 
     ctrlMute.addEventListener('click', () => {
       vid.muted = !vid.muted;
-      ctrlMute.textContent = vid.muted ? '🔇' : '🔊';
+      ctrlMute.textContent = vid.muted ? 'ðŸ”‡' : 'ðŸ”Š';
     });
 
     ctrlVolume.addEventListener('input', () => {
       vid.volume = ctrlVolume.value;
       vid.muted  = vid.volume === 0;
-      ctrlMute.textContent = vid.muted ? '🔇' : '🔊';
+      ctrlMute.textContent = vid.muted ? 'ðŸ”‡' : 'ðŸ”Š';
     });
 
     return Promise.resolve({
@@ -327,28 +327,67 @@
     });
   }
 
-  // ── 6d. Iframe fallback adapter ──────────────────────────────────────────
+  // -- 6d. Proxy-backed iframe adapter --------------------------------------
+  // The server fetches the target page, strips X-Frame-Options / CSP, and
+  // injects doro-sync.js which hooks into the page's <video> element and
+  // communicates back via postMessage.
   function createIframePlayer(url) {
+    const proxyUrl = '/proxy?url=' + encodeURIComponent(url);
+
     playerContainer.innerHTML = `<iframe
-      src="${escapeHtml(url)}"
-      sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+      id="proxy-iframe"
+      src="${proxyUrl}"
+      sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups"
       allow="autoplay; fullscreen"
       allowfullscreen></iframe>`;
     playerContainer.classList.add('aspect-16-9');
+
+    const iframe = document.getElementById('proxy-iframe');
+    let playCallbacks  = [];
+    let pauseCallbacks = [];
+    let seekCallbacks  = [];
+
+    function postCmd(cmd, currentTime) {
+      if (!iframe.contentWindow) return;
+      iframe.contentWindow.postMessage({ type: 'DORO_CMD', cmd, currentTime }, '*');
+    }
+
+    function handleMessage(e) {
+      const data = e.data;
+      if (!data || data.type !== 'DORO_EVENT') return;
+
+      if (data.event === 'ready') {
+        iframeWarning.textContent = 'Sync active — video detected on the page.';
+        return;
+      }
+
+      if (isSyncing) return;
+      if (data.event === 'play')  playCallbacks.forEach(cb  => cb(data.currentTime));
+      if (data.event === 'pause') pauseCallbacks.forEach(cb => cb(data.currentTime));
+      if (data.event === 'seek')  seekCallbacks.forEach(cb  => cb(data.currentTime));
+    }
+
+    window.addEventListener('message', handleMessage);
+
+    iframeWarning.textContent = 'Loading via proxy… Sync activates once a video is detected on the page.';
     iframeWarning.hidden = false;
 
-    // No reliable sync API — return a stub
-    const noop = () => {};
     return Promise.resolve({
-      play: noop, pause: noop, seekTo: noop,
-      getCurrentTime: () => 0, getDuration: () => 0,
-      onPlay: noop, onPause: noop, onSeek: noop
+      play(t)          { postCmd('play',  t); },
+      pause(t)         { postCmd('pause', t); },
+      seekTo(t)        { postCmd('seek',  t); },
+      getCurrentTime() { return 0; },
+      getDuration()    { return 0; },
+      onPlay(cb)       { playCallbacks.push(cb); },
+      onPause(cb)      { pauseCallbacks.push(cb); },
+      onSeek(cb)       { seekCallbacks.push(cb); },
+      destroy()        { window.removeEventListener('message', handleMessage); }
     });
   }
 
-  /* ─────────────────────────────────────────────────────────────────────────
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      7. Initialise / re-initialise the player
-  ───────────────────────────────────────────────────────────────────────── */
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   async function initPlayer(url, startTime, autoplay) {
     // Tear down previous player state
     customControls.hidden = true;
@@ -359,7 +398,7 @@
     if (!url) {
       playerContainer.innerHTML = `
         <div class="player-placeholder">
-          <span class="placeholder-icon">🎬</span>
+          <span class="placeholder-icon">ðŸŽ¬</span>
           <p>No video URL yet.</p>
         </div>`;
       player = null;
@@ -392,9 +431,9 @@
     attachPlayerListeners();
   }
 
-  /* ─────────────────────────────────────────────────────────────────────────
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      8. Attach Socket.io player event listeners
-  ───────────────────────────────────────────────────────────────────────── */
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   function attachPlayerListeners() {
     if (!player) return;
 
@@ -414,9 +453,9 @@
     });
   }
 
-  /* ─────────────────────────────────────────────────────────────────────────
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      9. Socket.io setup
-  ───────────────────────────────────────────────────────────────────────── */
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const socket = io();
 
   function joinRoom() {
@@ -428,7 +467,7 @@
     joinRoom();
   });
 
-  // ── room-state (sent only to the joining socket) ─────────────────────────
+  // â”€â”€ room-state (sent only to the joining socket) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   socket.on('room-state', async (state) => {
     isHost = (state.hostId === mySocketId);
     changeVideoBtn.hidden = !isHost;
@@ -440,18 +479,18 @@
     videoUrl = urlToLoad;
 
     await initPlayer(urlToLoad, state.currentTime, state.isPlaying);
-    appendSystemMessage('You joined the party 🎉');
+    appendSystemMessage('You joined the party ðŸŽ‰');
   });
 
-  // ── user-joined ──────────────────────────────────────────────────────────
+  // â”€â”€ user-joined â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   socket.on('user-joined', (data) => {
-    renderUsers(data.users, /* hostId unknown here — re-use last */null);
+    renderUsers(data.users, /* hostId unknown here â€” re-use last */null);
     // hostId may not be sent; re-check
     if (data.users) renderUsers(data.users, null);
     appendSystemMessage(`${escapeHtml(data.username)} joined`);
   });
 
-  // ── user-left ────────────────────────────────────────────────────────────
+  // â”€â”€ user-left â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   socket.on('user-left', (data) => {
     isHost = (data.hostId === mySocketId);
     changeVideoBtn.hidden = !isHost;
@@ -459,7 +498,7 @@
     appendSystemMessage(`${escapeHtml(data.username)} left`);
   });
 
-  // ── sync-play ────────────────────────────────────────────────────────────
+  // â”€â”€ sync-play â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   socket.on('sync-play', ({ currentTime }) => {
     if (!player) return;
     isSyncing = true;
@@ -467,7 +506,7 @@
     setTimeout(() => { isSyncing = false; }, 300);
   });
 
-  // ── sync-pause ───────────────────────────────────────────────────────────
+  // â”€â”€ sync-pause â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   socket.on('sync-pause', ({ currentTime }) => {
     if (!player) return;
     isSyncing = true;
@@ -475,7 +514,7 @@
     setTimeout(() => { isSyncing = false; }, 300);
   });
 
-  // ── sync-seek ────────────────────────────────────────────────────────────
+  // â”€â”€ sync-seek â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   socket.on('sync-seek', ({ currentTime }) => {
     if (!player) return;
     isSyncing = true;
@@ -483,21 +522,21 @@
     setTimeout(() => { isSyncing = false; }, 300);
   });
 
-  // ── chat-message ─────────────────────────────────────────────────────────
+  // â”€â”€ chat-message â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   socket.on('chat-message', ({ username: sender, message }) => {
     appendChatMessage(sender, message, sender === username ? 'self' : 'other');
   });
 
-  // ── video-changed ────────────────────────────────────────────────────────
+  // â”€â”€ video-changed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   socket.on('video-changed', async ({ videoUrl: newUrl }) => {
     videoUrl = newUrl;
     await initPlayer(newUrl, 0, false);
     appendSystemMessage(`Video changed`);
   });
 
-  /* ─────────────────────────────────────────────────────────────────────────
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      10. Users list rendering
-  ───────────────────────────────────────────────────────────────────────── */
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   let lastKnownHostId = null;
 
   function renderUsers(users, hostId) {
@@ -516,15 +555,15 @@
       li.innerHTML = `
         <div class="user-avatar${isSelf ? ' self' : ''}">${escapeHtml(initials)}</div>
         <span class="user-name">${escapeHtml(u.username)}${isSelf ? ' (you)' : ''}</span>
-        ${isUserHost ? '<span class="user-crown" title="Host">👑</span>' : ''}
+        ${isUserHost ? '<span class="user-crown" title="Host">ðŸ‘‘</span>' : ''}
       `;
       usersList.appendChild(li);
     });
   }
 
-  /* ─────────────────────────────────────────────────────────────────────────
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      11. Chat
-  ───────────────────────────────────────────────────────────────────────── */
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   function appendChatMessage(sender, message, type) {
     const div = document.createElement('div');
     div.className = `chat-msg ${type}`;
@@ -571,9 +610,9 @@
     }
   });
 
-  /* ─────────────────────────────────────────────────────────────────────────
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      12. Username modal
-  ───────────────────────────────────────────────────────────────────────── */
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   if (!username) {
     usernameModal.hidden = false;
     modalUsernameInput.focus();
@@ -589,13 +628,13 @@
     }
     username = val;
     usernameModal.hidden = true;
-    // Connect and join — socket may already be connected
+    // Connect and join â€” socket may already be connected
     if (socket.connected) joinRoom(); // else 'connect' event will fire joinRoom
   });
 
-  /* ─────────────────────────────────────────────────────────────────────────
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      13. Change video modal (host only)
-  ───────────────────────────────────────────────────────────────────────── */
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   changeVideoBtn.addEventListener('click', () => {
     modalVideoInput.value = videoUrl || '';
     videoModalError.hidden = true;
@@ -629,9 +668,9 @@
     if (e.target === videoModal) videoModal.hidden = true;
   });
 
-  /* ─────────────────────────────────────────────────────────────────────────
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      14. Helpers
-  ───────────────────────────────────────────────────────────────────────── */
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   function formatTime(seconds) {
     if (!seconds || isNaN(seconds)) return '0:00';
     const s = Math.floor(seconds % 60);

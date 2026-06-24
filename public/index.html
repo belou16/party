@@ -1014,6 +1014,9 @@
     if (_isGuest) {
       var roomId = _guestRoomId;
       _roomId = roomId;
+      document.getElementById('join-screen').style.display   = 'none';
+      document.getElementById('player-screen').style.display = 'flex';
+      setupTopbar(roomId);
       startSession(name, roomId, null, null, 0);
       return;
     }

@@ -1,82 +1,93 @@
-﻿/* doro-sync.js — injected by the proxy into every proxied page.
-   Finds any <video> element and bridges play/pause/seek events
-   to/from the parent room via postMessage. */
-(function () {
+﻿(function () {
   'use strict';
 
-  var attached = false;
+  var attachedVideos = [];
   var lastSeekTime = 0;
-  var video = null;
 
-  // ---- Commands from parent → video ----
+  function postUp(data) {
+    try { window.parent.postMessage(data, '*'); } catch (e) {}
+  }
+
+  function relayDown(data) {
+    var iframes = document.querySelectorAll('iframe');
+    for (var i = 0; i < iframes.length; i++) {
+      try { iframes[i].contentWindow.postMessage(data, '*'); } catch (e) {}
+    }
+  }
+
   window.addEventListener('message', function (e) {
     var data = e.data;
-    if (!data || data.type !== 'DORO_CMD') return;
+    if (!data) return;
 
-    // Try to get the video element fresh in case it changed
-    var vid = video || document.querySelector('video');
-    if (!vid) return;
-
-    switch (data.cmd) {
-      case 'play':
-        if (data.currentTime !== undefined) vid.currentTime = data.currentTime;
-        vid.play().catch(function () {});
-        break;
-      case 'pause':
-        if (data.currentTime !== undefined) vid.currentTime = data.currentTime;
-        vid.pause();
-        break;
-      case 'seek':
-        vid.currentTime = data.currentTime;
-        break;
+    if (data.type === 'DORO_EVENT') {
+      if (e.source !== window) postUp(data);
+      return;
     }
+
+    if (data.type !== 'DORO_CMD') return;
+
+    var vid = attachedVideos[0] || document.querySelector('video');
+    if (vid) {
+      switch (data.cmd) {
+        case 'play':
+          if (data.currentTime !== undefined) vid.currentTime = data.currentTime;
+          vid.play().catch(function () {});
+          break;
+        case 'pause':
+          if (data.currentTime !== undefined) vid.currentTime = data.currentTime;
+          vid.pause();
+          break;
+        case 'seek':
+          vid.currentTime = data.currentTime;
+          break;
+      }
+    }
+
+    relayDown(data);
   });
 
-  // ---- Video events → parent ----
   function attachToVideo(vid) {
-    video = vid;
+    if (attachedVideos.indexOf(vid) !== -1) return;
+    attachedVideos.push(vid);
 
     vid.addEventListener('play', function () {
-      window.parent.postMessage({ type: 'DORO_EVENT', event: 'play', currentTime: vid.currentTime }, '*');
+      postUp({ type: 'DORO_EVENT', event: 'play', currentTime: vid.currentTime });
     });
-
     vid.addEventListener('pause', function () {
-      window.parent.postMessage({ type: 'DORO_EVENT', event: 'pause', currentTime: vid.currentTime }, '*');
+      postUp({ type: 'DORO_EVENT', event: 'pause', currentTime: vid.currentTime });
     });
-
     vid.addEventListener('seeked', function () {
       var t = vid.currentTime;
       if (Math.abs(t - lastSeekTime) > 0.5) {
-        window.parent.postMessage({ type: 'DORO_EVENT', event: 'seek', currentTime: t }, '*');
+        postUp({ type: 'DORO_EVENT', event: 'seek', currentTime: t });
       }
       lastSeekTime = t;
     });
 
-    // Tell the parent the sync bridge is active
-    window.parent.postMessage({ type: 'DORO_EVENT', event: 'ready' }, '*');
+    postUp({ type: 'DORO_EVENT', event: 'ready' });
   }
 
-  // ---- Find the video (may appear after page load) ----
-  function tryAttach() {
-    if (attached) return;
-    var vid = document.querySelector('video');
-    if (vid) {
-      attached = true;
-      attachToVideo(vid);
+  function scanForVideos() {
+    var videos = document.querySelectorAll('video');
+    for (var i = 0; i < videos.length; i++) {
+      attachToVideo(videos[i]);
     }
   }
 
-  // Watch for dynamically inserted video elements
-  var observer = new MutationObserver(function () { if (!attached) tryAttach(); });
+  var observer = new MutationObserver(scanForVideos);
 
-  function startObserving() {
-    observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
-    tryAttach();
+  function start() {
+    observer.observe(document.body || document.documentElement, {
+      childList: true,
+      subtree: true,
+    });
+    scanForVideos();
+    setInterval(scanForVideos, 1500);
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startObserving);
+    document.addEventListener('DOMContentLoaded', start);
   } else {
-    startObserving();
+    start();
   }
 })();

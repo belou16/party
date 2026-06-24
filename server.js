@@ -42,8 +42,6 @@ app.get('/room/:roomId', (_req, res) =>
 );
 
 // ── Proxy endpoint ────────────────────────────────────────────────────────
-// Fetches any URL server-side, strips X-Frame-Options / CSP, injects our
-// sync bridge inline so the iframe can control the page video via postMessage.
 app.get('/proxy', (req, res) => {
   const rawUrl = req.query.url;
   if (!rawUrl) return res.status(400).send('Missing url parameter');
@@ -52,7 +50,6 @@ app.get('/proxy', (req, res) => {
   try { parsed = new URL(rawUrl); }
   catch (_) { return res.status(400).send('Invalid URL'); }
 
-  // Block loopback / private addresses
   const host = parsed.hostname.toLowerCase();
   if (
     host === 'localhost'     ||
@@ -65,7 +62,6 @@ app.get('/proxy', (req, res) => {
 
   const transport = parsed.protocol === 'https:' ? https : http;
 
-  // Guard: prevent ERR_HTTP_HEADERS_SENT when timeout + error both fire
   let responded = false;
   function sendOnce(fn) {
     if (responded || res.headersSent) return;
@@ -83,15 +79,17 @@ app.get('/proxy', (req, res) => {
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
         '(KHTML, like Gecko) Chrome/124.0 Safari/537.36',
       'Accept':          'text/html,application/xhtml+xml,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.5',
+      'Accept-Language': 'en-US,en;q=0.9',
       'Accept-Encoding': 'identity',
       'Connection':      'close',
+      // Send a realistic Referer/Origin so sites don't block hotlinking
+      'Referer':         parsed.origin + '/',
+      'Origin':          parsed.origin,
     },
-    timeout: 12000,
+    timeout: 15000,
   };
 
   const proxyReq = transport.request(options, (proxyRes) => {
-    // Redirect handling
     if ([301, 302, 303, 307, 308].includes(proxyRes.statusCode)) {
       const loc = proxyRes.headers['location'];
       if (loc) {
@@ -104,7 +102,6 @@ app.get('/proxy', (req, res) => {
 
     const contentType = proxyRes.headers['content-type'] || '';
 
-    // Non-HTML: pipe straight through
     if (!contentType.includes('text/html')) {
       responded = true;
       const fwd = {};
@@ -115,7 +112,6 @@ app.get('/proxy', (req, res) => {
       return proxyRes.pipe(res);
     }
 
-    // HTML: collect, inject sync bridge, strip security headers
     let body = '';
     let stream = proxyRes;
     const enc = proxyRes.headers['content-encoding'];
@@ -128,7 +124,7 @@ app.get('/proxy', (req, res) => {
       sendOnce(() => res.status(502).send('Decompress error: ' + err.message))
     );
     stream.on('end', () => {
-      // Inject sync script BEFORE <base> tag so it always loads from our origin
+      // Inject sync script BEFORE <base> tag
       const injection =
         '<script>\n' + SYNC_SCRIPT + '\n</script>\n' +
         '<base href="' + rawUrl + '" />';
@@ -144,6 +140,26 @@ app.get('/proxy', (req, res) => {
         modified = injection + '\n' + modified;
       }
 
+      // Rewrite video-embed iframes (allowfullscreen) so they also pass
+      // through our proxy and get the sync script injected inside them.
+      modified = modified.replace(
+        /<iframe([^>]*)>/gi,
+        function (match, attrs) {
+          if (!/allowfullscreen|allow\s*=\s*["'][^"']*(?:autoplay|fullscreen)/i.test(attrs)) {
+            return match;
+          }
+          return match.replace(
+            /(\bsrc\s*=\s*["'])(https?:\/\/[^"']+)(["'])/i,
+            function (m, prefix, iframeSrc, suffix) {
+              try {
+                const resolved = new URL(iframeSrc, rawUrl).toString();
+                return prefix + '/proxy?url=' + encodeURIComponent(resolved) + suffix;
+              } catch (_) { return m; }
+            }
+          );
+        }
+      );
+
       sendOnce(() => {
         res.removeHeader('Content-Security-Policy');
         res.removeHeader('X-Frame-Options');
@@ -153,7 +169,6 @@ app.get('/proxy', (req, res) => {
     });
   });
 
-  // destroy() also fires 'error' — sendOnce prevents the double-send crash
   proxyReq.on('timeout', () => {
     proxyReq.destroy();
     sendOnce(() => res.status(504).send('Proxy request timed out'));

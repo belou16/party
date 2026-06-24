@@ -80,6 +80,9 @@
     if (/vimeo\.com\/(?:video\/)?(\d+)/.test(url)) {
       return 'vimeo';
     }
+    if (/rumble\.com\/(v[a-z0-9]+)/i.test(url)) {
+      return 'rumble';
+    }
     if (/\.(mp4|webm|ogg|ogv|m3u8|mov|avi|mkv)(\?.*)?$/i.test(url)) {
       return 'direct';
     }
@@ -93,6 +96,11 @@
 
   function extractVimeoId(url) {
     const m = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+    return m ? m[1] : null;
+  }
+
+  function extractRumbleId(url) {
+    const m = url.match(/rumble\.com\/(v[a-z0-9]+)/i);
     return m ? m[1] : null;
   }
 
@@ -418,6 +426,13 @@
         const vid = extractVimeoId(url);
         if (!vid) { player = await createIframePlayer(url); break; }
         player = await createVimeoPlayer(vid, startTime, autoplay);
+        break;
+      }
+      case 'rumble': {
+        // Proxy the embed URL directly so our sync script runs inside the player
+        const vid = extractRumbleId(url);
+        const embedUrl = vid ? 'https://rumble.com/embed/' + vid + '/' : url;
+        player = await createIframePlayer(embedUrl);
         break;
       }
       case 'direct':

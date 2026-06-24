@@ -108,6 +108,8 @@
      5. Sync state flag
   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   let lastSyncedAt = 0;
+  let lastSeekSyncAt = 0;           // longer quiet for seek-resume echo prevention
+  const SEEK_RESUME_QUIET_MS = 2500; // seek buffering can take >300ms
   const SYNC_QUIET_MS = 300;
   let mySocketId = null;
   let isHost = false;
@@ -166,6 +168,7 @@
     let playCallbacks  = [];
     let pauseCallbacks = [];
     let seekCallbacks  = [];
+    let seekJustFired  = false;
     let lastState      = -1;
     let lastTime       = 0;
 
@@ -177,11 +180,17 @@
       if (!quiet) {
         if (Math.abs(t - lastTime) > 1.5 && state !== YT.PlayerState.ENDED) {
           seekCallbacks.forEach(cb => cb(t));
+          seekJustFired = true;
         }
         if (state === YT.PlayerState.PLAYING && lastState !== YT.PlayerState.PLAYING) {
-          playCallbacks.forEach(cb => cb(t));
+          const suppressPlay = seekJustFired || (Date.now() - lastSeekSyncAt) < SEEK_RESUME_QUIET_MS;
+          if (!suppressPlay) playCallbacks.forEach(cb => cb(t));
+          seekJustFired = false;
         } else if (state === YT.PlayerState.PAUSED && lastState !== YT.PlayerState.PAUSED) {
-          pauseCallbacks.forEach(cb => cb(t));
+          if ((Date.now() - lastSeekSyncAt) >= SEEK_RESUME_QUIET_MS) {
+            pauseCallbacks.forEach(cb => cb(t));
+          }
+          seekJustFired = false;
         }
       }
       lastTime  = t;
@@ -228,7 +237,7 @@
         let pauseCallbacks = [];
         let seekCallbacks  = [];
 
-        vp.on('play',   () => { if (Date.now() - lastSyncedAt >= SYNC_QUIET_MS) { vp.getCurrentTime().then(t => playCallbacks.forEach(cb => cb(t))); } });
+        vp.on('play',   () => { if (Date.now() - lastSyncedAt >= SYNC_QUIET_MS && Date.now() - lastSeekSyncAt >= SEEK_RESUME_QUIET_MS) { vp.getCurrentTime().then(t => playCallbacks.forEach(cb => cb(t))); } });
         vp.on('pause',  () => { if (Date.now() - lastSyncedAt >= SYNC_QUIET_MS) { vp.getCurrentTime().then(t => pauseCallbacks.forEach(cb => cb(t))); } });
         vp.on('seeked', () => { if (Date.now() - lastSyncedAt >= SYNC_QUIET_MS) { vp.getCurrentTime().then(t => seekCallbacks.forEach(cb => cb(t))); } });
 
@@ -525,6 +534,7 @@
   socket.on('sync-play', ({ currentTime }) => {
     if (!player) return;
     lastSyncedAt = Date.now();
+    lastSeekSyncAt = 0; // explicit play clears seek-resume suppression
     player.play(currentTime);
 
   });
@@ -541,6 +551,7 @@
   socket.on('sync-seek', ({ currentTime }) => {
     if (!player) return;
     lastSyncedAt = Date.now();
+    lastSeekSyncAt = Date.now();
     player.seekTo(currentTime);
 
   });

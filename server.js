@@ -267,10 +267,10 @@ io.on('connection', socket => {
     socket.to(roomId).emit('sync-seek', { currentTime });
   });
 
-  socket.on('heartbeat', ({ roomId, currentTime, sentAt }) => {
+  socket.on('heartbeat', ({ roomId, currentTime }) => {
     const room = rooms.get(roomId);
     if (!room || room.hostId !== socket.id) return;
-    socket.to(roomId).emit('sync-heartbeat', { currentTime, sentAt });
+    socket.to(roomId).emit('sync-heartbeat', { currentTime });
   });
 
   socket.on('chat-message', ({ roomId, username, message }) => {

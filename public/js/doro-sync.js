@@ -23,7 +23,11 @@
     switch (cmd) {
       case 'play':
         if (currentTime !== undefined) vid.currentTime = currentTime;
-        vid.play().catch(function () {});
+        vid.play().catch(function (e) {
+          if (e && e.name === 'NotAllowedError') {
+            postUp({ type: 'DORO_EVENT', event: 'autoplay-blocked', currentTime: vid.currentTime });
+          }
+        });
         break;
       case 'pause':
         if (currentTime !== undefined) vid.currentTime = currentTime;
@@ -76,6 +80,7 @@
 
     vid.addEventListener('pause', function () {
       if (isCmdQuiet()) return;
+      if (vid.seeking) return;
       postUp({ type: 'DORO_EVENT', event: 'pause', currentTime: vid.currentTime });
     });
 

@@ -254,13 +254,32 @@
   }
 
   // â”€â”€ 6c. Direct video adapter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  function showTapToStart(onTap) {
+    var overlay = document.getElementById('tap-to-start-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'tap-to-start-overlay';
+      overlay.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);cursor:pointer;z-index:10;border-radius:8px;';
+      overlay.innerHTML = '<span style="color:#fff;font-size:1.1rem;padding:12px 24px;background:rgba(255,255,255,.15);border-radius:6px;">Tap to start</span>';
+      playerContainer.style.position = 'relative';
+      playerContainer.appendChild(overlay);
+    }
+    overlay.onclick = function () { hideTapToStart(); onTap(); };
+  }
+  function hideTapToStart() {
+    var ov = document.getElementById('tap-to-start-overlay');
+    if (ov) ov.remove();
+  }
+
   function createDirectPlayer(url, startTime, autoplay) {
     playerContainer.innerHTML = `<video id="video-player" src="${escapeHtml(url)}" preload="metadata"></video>`;
     playerContainer.classList.remove('aspect-16-9');
 
     const vid = document.getElementById('video-player');
     if (startTime > 0) vid.currentTime = startTime;
-    if (autoplay) vid.play().catch(() => {});
+    if (autoplay) vid.play().catch(function (e) {
+      if (e.name === 'NotAllowedError') showTapToStart(function () { vid.play().catch(function () {}); });
+    });
 
     // Show custom controls
     customControls.hidden = false;
@@ -284,6 +303,7 @@
     });
 
     vid.addEventListener('play', () => {
+      hideTapToStart();
       playIcon.textContent = 'â¸';
       if (Date.now() >= syncedUntil) playCallbacks.forEach(cb => cb(vid.currentTime));
     });
@@ -325,7 +345,12 @@
     });
 
     return Promise.resolve({
-      play(t)  { if (t !== undefined) vid.currentTime = t; vid.play().catch(() => {}); },
+      play(t) {
+        if (t !== undefined) vid.currentTime = t;
+        vid.play().catch(function (e) {
+          if (e.name === 'NotAllowedError') showTapToStart(function () { vid.play().catch(function () {}); });
+        });
+      },
       pause(t) { if (t !== undefined) vid.currentTime = t; vid.pause(); },
       seekTo(t)        { vid.currentTime = t; },
       getCurrentTime() { return vid.currentTime; },
@@ -372,6 +397,10 @@
         return;
       }
 
+      if (data.event === 'autoplay-blocked') {
+        showTapToStart(function () { postCmd('play', data.currentTime); });
+        return;
+      }
       if (Date.now() < syncedUntil) return;
       if (data.event === 'play')  playCallbacks.forEach(cb  => cb(data.currentTime));
       if (data.event === 'pause') pauseCallbacks.forEach(cb => cb(data.currentTime));
@@ -543,13 +572,13 @@
   // ── sync-play ────────────────────────────────────────────────────────────────────
   socket.on('sync-play', ({ currentTime }) => {
     if (!player) return;
-    _scheduleSyncCmd('play', currentTime, 1000);
+    _scheduleSyncCmd('play', currentTime, 3000);
   });
 
   // ── sync-pause ───────────────────────────────────────────────────────────────────
   socket.on('sync-pause', ({ currentTime }) => {
     if (!player) return;
-    _scheduleSyncCmd('pause', currentTime, 1000);
+    _scheduleSyncCmd('pause', currentTime, 3000);
   });
 
   // ── sync-seek ────────────────────────────────────────────────────────────────────
@@ -570,7 +599,7 @@
       if (!player) return;
       const t = player.getCurrentTime();
       if (typeof t === 'number' && t > 0) {
-        socket.emit('heartbeat', { roomId, currentTime: t, sentAt: Date.now() });
+        socket.emit('heartbeat', { roomId, currentTime: t });
       }
     }, 10000);
   }
@@ -579,12 +608,11 @@
     _heartbeatTimer = null;
   }
 
-  socket.on('sync-heartbeat', ({ currentTime, sentAt }) => {
+  socket.on('sync-heartbeat', ({ currentTime }) => {
     if (!player || isHost) return;
-    const expected = currentTime + (Date.now() - sentAt) / 1000;
-    const actual   = player.getCurrentTime();
-    if (typeof actual === 'number' && actual > 0 && Math.abs(actual - expected) > 2.5) {
-      _scheduleSyncCmd('seek', expected, 3000);
+    const actual = player.getCurrentTime();
+    if (typeof actual === 'number' && actual > 0 && Math.abs(actual - currentTime) > 5) {
+      _scheduleSyncCmd('seek', currentTime, 3000);
     }
   });
 

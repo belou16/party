@@ -151,6 +151,24 @@
 
     #viewer-count { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
 
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+    #share-btn {
+      display: none;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 12px;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    #share-btn:hover { background: var(--surface); border-color: var(--accent); }
+    #share-btn.copied { border-color: var(--success); color: var(--success); }
+
     #main-area {
       flex: 1;
       display: flex;
@@ -191,9 +209,9 @@
 
     #iframe-overlay {
       position: absolute;
-      bottom: 0; left: 0; right: 0;
-      background: linear-gradient(transparent, rgba(0,0,0,0.90) 55%);
-      padding: 44px 16px 14px;
+      top: 0; left: 0; right: 0;
+      background: linear-gradient(rgba(0,0,0,0.82) 0%, transparent 100%);
+      padding: 14px 16px 44px;
       opacity: 0;
       transition: opacity 0.22s;
       pointer-events: none;
@@ -461,7 +479,10 @@
         <span id="host-badge"      class="badge">👑 Host</span>
         <span id="reconnect-badge" class="badge">⚠️ Reconnecting…</span>
       </div>
-      <span id="viewer-count">👥 1</span>
+      <div class="topbar-right">
+        <button id="share-btn" onclick="shareRoom()">🔗 Inviter un ami</button>
+        <span id="viewer-count">👥 1</span>
+      </div>
     </div>
 
     <div id="main-area">
@@ -798,7 +819,31 @@
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  // Pré-remplir le room ID depuis ?room=xxx dans l'URL
+  (function() {
+    var p = new URLSearchParams(location.search);
+    var r = p.get('room');
+    if (r) document.getElementById('input-room').value = r;
+  })();
+
   var syncMgr = null, iframeMgr = null;
+  var _currentRoomId = null;
+
+  function shareRoom() {
+    if (!_currentRoomId) return;
+    var link = location.origin + location.pathname + '?room=' + encodeURIComponent(_currentRoomId);
+    navigator.clipboard.writeText(link).then(function() {
+      var btn = document.getElementById('share-btn');
+      btn.textContent = '✅ Lien copié !';
+      btn.classList.add('copied');
+      setTimeout(function() {
+        btn.textContent = '🔗 Inviter un ami';
+        btn.classList.remove('copied');
+      }, 2000);
+    }).catch(function() {
+      prompt('Copie ce lien et envoie-le à ton ami :', link);
+    });
+  }
 
   function iframePlay()  { if (iframeMgr) iframeMgr.play(); }
   function iframePause() { if (iframeMgr) iframeMgr.pause(); }
@@ -831,9 +876,13 @@
       return;
     }
 
+    _currentRoomId = roomId;
     document.getElementById('join-screen').style.display   = 'none';
     document.getElementById('player-screen').style.display = 'flex';
     document.getElementById('room-badge').textContent       = '🎬 ' + roomId;
+    document.getElementById('share-btn').style.display      = 'inline-flex';
+    // Mettre l'URL à jour sans recharger (pour que le lien de partage fonctionne)
+    history.replaceState(null, '', '?room=' + encodeURIComponent(roomId));
 
     var socket = io();
 

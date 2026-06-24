@@ -1,4 +1,5 @@
 ﻿const express    = require('express');
+const https      = require('https');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const path       = require('path');
@@ -8,6 +9,40 @@ const httpServer = createServer(app);
 const io         = new Server(httpServer, { cors: { origin: '*' } });
 
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Résout l'embed ID Rumble via l'API oEmbed (page ID != embed ID)
+app.get('/api/rumble-embed', (req, res) => {
+  const rawUrl = req.query.url;
+  if (!rawUrl) return res.status(400).json({ error: 'Missing url' });
+
+  const oembedUrl =
+    'https://rumble.com/api/Media/oembed.json?url=' + encodeURIComponent(rawUrl);
+
+  const req2 = https.request(oembedUrl, {
+    method:  'GET',
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; WatchParty/1.0)',
+      'Accept':     'application/json',
+    },
+    timeout: 8000,
+  }, (r) => {
+    let body = '';
+    r.on('data', d => { body += d; });
+    r.on('end', () => {
+      try {
+        const json = JSON.parse(body);
+        const m    = json.html && json.html.match(/\/embed\/(v[a-z0-9]+)/i);
+        if (m) return res.json({ embedId: m[1], embedUrl: 'https://rumble.com/embed/' + m[1] + '/' });
+        res.status(404).json({ error: 'Embed ID not found' });
+      } catch (_) {
+        res.status(502).json({ error: 'Invalid oEmbed response' });
+      }
+    });
+  });
+  req2.on('error', e  => res.status(502).json({ error: e.message }));
+  req2.on('timeout', () => { req2.destroy(); res.status(504).json({ error: 'Timeout' }); });
+  req2.end();
+});
 
 const rooms = new Map();
 
@@ -139,5 +174,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () =>
-  console.log(`\n✅  Watch Party  →  http://localhost:${PORT}\n`)
+  console.log('\n✅  Watch Party  →  http://localhost:' + PORT + '\n')
 );

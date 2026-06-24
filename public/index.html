@@ -865,22 +865,63 @@
       document.getElementById('video-direct').style.display   = 'none';
       document.getElementById('iframe-wrapper').style.display = 'block';
       setStatusLoading();
-      var iframe = document.getElementById('video-iframe');
-      iframe.src = buildEmbedUrl(detected.type, detected.videoId, 0, false);
-      iframe.addEventListener('load', hideStatus, { once: true });
-      setTimeout(hideStatus, 4000);
-      iframeMgr = new IframeSyncManager({
-        socket: socket, roomId: roomId,
-        videoId: detected.videoId, mode: detected.type, duration: durationSec,
-      });
+
+      // Chargement de l'iframe une fois l'ID vidéo connu
+      function loadIframe(videoId, mode) {
+        var iframe = document.getElementById('video-iframe');
+        iframe.src = buildEmbedUrl(mode, videoId, 0, false);
+        iframe.addEventListener('load', hideStatus, { once: true });
+        setTimeout(hideStatus, 5000);
+        iframeMgr = new IframeSyncManager({
+          socket: socket, roomId: roomId,
+          videoId: videoId, mode: mode, duration: durationSec,
+        });
+      }
+
+      // Pour Rumble : les IDs de page (v4wv296) ≠ IDs d'embed (v4ue2sl)
+      // On passe par /api/rumble-embed qui appelle l'oEmbed Rumble pour résoudre le vrai ID
+      if (detected.type === 'rumble') {
+        fetch('/api/rumble-embed?url=' + encodeURIComponent(rawUrl))
+          .then(function(r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+          })
+          .then(function(data) {
+            if (data.embedId) {
+              detected.videoId  = data.embedId;
+              detected.embedUrl = data.embedUrl;
+            }
+            loadIframe(detected.videoId, detected.type);
+            rumbleReady = true;
+            tryEmitSetVideo();
+          })
+          .catch(function(err) {
+            console.warn('[Rumble oEmbed]', err);
+            setStatus('⚠️', 'Rumble introuvable',
+              'Impossible de charger l\'embed. Vérifie que le lien est public et accessible.', []);
+          });
+      } else {
+        loadIframe(detected.videoId, detected.type);
+      }
+    }
+
+    // Pour Rumble : s'assurer que socket ET fetch sont prêts avant d'émettre set_video
+    var rumbleReady  = detected.type !== 'rumble'; // true si pas Rumble
+    var socketJoined = false;
+
+    function tryEmitSetVideo() {
+      if (socketJoined && rumbleReady && detected.type !== 'direct') {
+        socket.emit('set_video', { roomId: roomId, url: rawUrl,
+          mode: detected.type, videoId: detected.videoId, embedUrl: detected.embedUrl });
+      }
     }
 
     var connected = false;
     socket.on('connect', function() {
       socket.emit('join', { roomId: roomId });
-      if (!connected && detected.type !== 'direct') {
-        socket.emit('set_video', { roomId: roomId, url: rawUrl,
-          mode: detected.type, videoId: detected.videoId, embedUrl: detected.embedUrl });
+      if (!connected) {
+        socketJoined = true;
+        tryEmitSetVideo();
       }
       if (connected) {
         document.getElementById('reconnect-badge').style.display = 'none';

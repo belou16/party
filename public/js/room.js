@@ -107,7 +107,8 @@
   /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      5. Sync state flag
   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  let isSyncing = false;
+  let lastSyncedAt = 0;
+  const SYNC_QUIET_MS = 2000;
   let mySocketId = null;
   let isHost = false;
 
@@ -169,7 +170,7 @@
     let lastTime       = 0;
 
     ytPlayer.addEventListener('onStateChange', (e) => {
-      if (isSyncing) return;
+      if (Date.now() - lastSyncedAt < SYNC_QUIET_MS) return;
       const state = e.data;
       const t     = ytPlayer.getCurrentTime();
 
@@ -227,9 +228,9 @@
         let pauseCallbacks = [];
         let seekCallbacks  = [];
 
-        vp.on('play',   () => { if (!isSyncing) { vp.getCurrentTime().then(t => playCallbacks.forEach(cb => cb(t))); } });
-        vp.on('pause',  () => { if (!isSyncing) { vp.getCurrentTime().then(t => pauseCallbacks.forEach(cb => cb(t))); } });
-        vp.on('seeked', () => { if (!isSyncing) { vp.getCurrentTime().then(t => seekCallbacks.forEach(cb => cb(t))); } });
+        vp.on('play',   () => { if (Date.now() - lastSyncedAt >= SYNC_QUIET_MS) { vp.getCurrentTime().then(t => playCallbacks.forEach(cb => cb(t))); } });
+        vp.on('pause',  () => { if (Date.now() - lastSyncedAt >= SYNC_QUIET_MS) { vp.getCurrentTime().then(t => pauseCallbacks.forEach(cb => cb(t))); } });
+        vp.on('seeked', () => { if (Date.now() - lastSyncedAt >= SYNC_QUIET_MS) { vp.getCurrentTime().then(t => seekCallbacks.forEach(cb => cb(t))); } });
 
         resolve({
           play(t)  {
@@ -284,16 +285,16 @@
 
     vid.addEventListener('play', () => {
       playIcon.textContent = 'â¸';
-      if (!isSyncing) playCallbacks.forEach(cb => cb(vid.currentTime));
+      if (Date.now() - lastSyncedAt >= SYNC_QUIET_MS) playCallbacks.forEach(cb => cb(vid.currentTime));
     });
 
     vid.addEventListener('pause', () => {
       playIcon.textContent = 'â–¶';
-      if (!isSyncing) pauseCallbacks.forEach(cb => cb(vid.currentTime));
+      if (Date.now() - lastSyncedAt >= SYNC_QUIET_MS) pauseCallbacks.forEach(cb => cb(vid.currentTime));
     });
 
     vid.addEventListener('seeked', () => {
-      if (!isSyncing) {
+      if (Date.now() - lastSyncedAt >= SYNC_QUIET_MS) {
         if (Math.abs(vid.currentTime - lastSeekTime) > 0.5) {
           seekCallbacks.forEach(cb => cb(vid.currentTime));
         }
@@ -369,7 +370,7 @@
         return;
       }
 
-      if (isSyncing) return;
+      if (Date.now() - lastSyncedAt < SYNC_QUIET_MS) return;
       if (data.event === 'play')  playCallbacks.forEach(cb  => cb(data.currentTime));
       if (data.event === 'pause') pauseCallbacks.forEach(cb => cb(data.currentTime));
       if (data.event === 'seek')  seekCallbacks.forEach(cb  => cb(data.currentTime));
@@ -457,17 +458,17 @@
     if (!player) return;
 
     player.onPlay((t) => {
-      if (isSyncing) return;
+      if (Date.now() - lastSyncedAt < SYNC_QUIET_MS) return;
       socket.emit('play', { roomId, currentTime: t });
     });
 
     player.onPause((t) => {
-      if (isSyncing) return;
+      if (Date.now() - lastSyncedAt < SYNC_QUIET_MS) return;
       socket.emit('pause', { roomId, currentTime: t });
     });
 
     player.onSeek((t) => {
-      if (isSyncing) return;
+      if (Date.now() - lastSyncedAt < SYNC_QUIET_MS) return;
       socket.emit('seek', { roomId, currentTime: t });
     });
   }

@@ -26,7 +26,7 @@ const rooms = new Map();
 function getOrCreateRoom(roomId) {
   if (!rooms.has(roomId)) {
     rooms.set(roomId, {
-      videoUrl: '', currentTime: 0, isPlaying: false,
+      videoUrl: '', currentTime: 0, isPlaying: false, playedAt: 0,
       hostId: null, users: new Map(),
     });
   }
@@ -232,9 +232,13 @@ io.on('connection', socket => {
     if (videoUrl && !room.videoUrl) room.videoUrl = videoUrl;
     room.users.set(socket.id, { id: socket.id, username });
 
+    const liveTime = (room.isPlaying && room.playedAt)
+      ? room.currentTime + (Date.now() - room.playedAt) / 1000
+      : room.currentTime;
+
     socket.emit('room-state', {
       videoUrl:    room.videoUrl,
-      currentTime: room.currentTime,
+      currentTime: liveTime,
       isPlaying:   room.isPlaying,
       hostId:      room.hostId,
       users:       getRoomUsers(room),
@@ -246,19 +250,20 @@ io.on('connection', socket => {
 
   socket.on('play', ({ roomId, currentTime }) => {
     const room = rooms.get(roomId); if (!room) return;
-    room.isPlaying = true; room.currentTime = currentTime;
+    room.isPlaying = true; room.currentTime = currentTime; room.playedAt = Date.now();
     socket.to(roomId).emit('sync-play', { currentTime });
   });
 
   socket.on('pause', ({ roomId, currentTime }) => {
     const room = rooms.get(roomId); if (!room) return;
-    room.isPlaying = false; room.currentTime = currentTime;
+    room.isPlaying = false; room.currentTime = currentTime; room.playedAt = 0;
     socket.to(roomId).emit('sync-pause', { currentTime });
   });
 
   socket.on('seek', ({ roomId, currentTime }) => {
     const room = rooms.get(roomId); if (!room) return;
     room.currentTime = currentTime;
+    if (room.isPlaying) room.playedAt = Date.now();
     socket.to(roomId).emit('sync-seek', { currentTime });
   });
 

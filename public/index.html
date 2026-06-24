@@ -153,8 +153,10 @@
       background: #000;
       display: flex;
       align-items: center;
+      justify-content: center;
       overflow: hidden;
       min-width: 0;
+      position: relative;
     }
 
     #video {
@@ -162,6 +164,45 @@
       height: 100%;
       object-fit: contain;
       display: block;
+    }
+
+    /* Statut vidéo : chargement / erreur / placeholder */
+    #video-status {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: #000;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 32px;
+      text-align: center;
+      pointer-events: none;
+    }
+    #video-status.visible { display: flex; pointer-events: auto; }
+
+    .vstatus-icon  { font-size: 48px; }
+    .vstatus-title { font-size: 16px; font-weight: 600; color: var(--text); }
+    .vstatus-sub   { font-size: 13px; color: var(--text-muted); max-width: 340px; line-height: 1.5; }
+    .vstatus-pill  {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      padding: 4px 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: monospace;
+    }
+    .vstatus-pills { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .vstatus-spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
     }
 
     #chat-panel {
@@ -330,6 +371,23 @@
     <div id="main-area">
       <div id="video-container">
         <video id="video" controls preload="auto"></video>
+
+        <!-- Statut : affiché par le JS selon l'état de la vidéo -->
+        <div id="video-status" class="visible">
+          <div class="vstatus-icon">🎬</div>
+          <div class="vstatus-title">En attente d'une vidéo</div>
+          <div class="vstatus-sub">
+            Entre l'ID de la room, ton nom et un lien vidéo, puis clique sur
+            <strong>Rejoindre la party</strong>.
+          </div>
+          <div class="vstatus-sub">Formats supportés :</div>
+          <div class="vstatus-pills">
+            <span class="vstatus-pill">.mp4</span>
+            <span class="vstatus-pill">.webm</span>
+            <span class="vstatus-pill">.ogg</span>
+            <span class="vstatus-pill">.m3u8</span>
+          </div>
+        </div>
       </div>
 
       <div id="chat-panel">
@@ -583,13 +641,59 @@
     if (!url) { alert('Entre une URL de vidéo.'); return; }
 
     // Charger la vidéo
-    const video = document.getElementById('video');
-    video.src = url;
+    const video  = document.getElementById('video');
+    const status = document.getElementById('video-status');
+
+    function setStatus(icon, title, sub, pills = []) {
+      status.innerHTML =
+        `<div class="vstatus-icon">${icon}</div>` +
+        `<div class="vstatus-title">${title}</div>` +
+        (sub ? `<div class="vstatus-sub">${sub}</div>` : '') +
+        (pills.length
+          ? `<div class="vstatus-pills">${pills.map(p => `<span class="vstatus-pill">${p}</span>`).join('')}</div>`
+          : '');
+      status.classList.add('visible');
+    }
+
+    function setStatusLoading() {
+      status.innerHTML =
+        '<div class="vstatus-spinner"></div>' +
+        '<div class="vstatus-title">Chargement…</div>';
+      status.classList.add('visible');
+    }
+
+    function hideStatus() { status.classList.remove('visible'); }
+
+    // Feedback état vidéo
+    video.addEventListener('loadstart', setStatusLoading);
+
+    video.addEventListener('canplay', hideStatus);
+
+    video.addEventListener('error', () => {
+      const code = video.error?.code;
+      if (code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+        setStatus('🚫', 'Format non supporté',
+          'Ce lien ne peut pas être lu directement par le navigateur.<br>' +
+          'YouTube, Vimeo, Twitch… ne sont <strong>pas supportés</strong>.<br>' +
+          'Utilise un lien vidéo direct :',
+          ['.mp4', '.webm', '.ogg', '.m3u8']);
+      } else if (code === MediaError.MEDIA_ERR_NETWORK) {
+        setStatus('📡', 'Erreur réseau',
+          'Impossible d\'accéder à la vidéo. Vérifie que le lien est public et accessible.');
+      } else {
+        setStatus('⚠️', 'Impossible de charger la vidéo',
+          'Vérifie que le lien est un fichier vidéo direct (pas YouTube, pas Vimeo).<br>' +
+          'Exemple : <code style="color:var(--accent)">https://example.com/video.mp4</code>');
+      }
+    });
 
     // Afficher l'écran player
     document.getElementById('join-screen').style.display   = 'none';
     document.getElementById('player-screen').style.display = 'flex';
     document.getElementById('room-badge').textContent       = '🎬 ' + roomId;
+
+    // Lancer le chargement
+    video.src = url;
 
     // Socket + sync manager
     socket = io();

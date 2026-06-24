@@ -3,7 +3,7 @@
   var attachedVideos = [];
   var lastSeekTime   = 0;
   var lastCmdTime    = 0;
-  var CMD_QUIET_MS   = 1500;
+  var CMD_QUIET_MS   = 3000; // matches room-page syncedUntil seek window
   var pendingCmd     = null;  // command queued while no video is attached yet
 
   function isCmdQuiet() { return (Date.now() - lastCmdTime) < CMD_QUIET_MS; }
@@ -101,7 +101,7 @@
   function start() {
     observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
     scanForVideos();
-    setInterval(scanForVideos, 1000);
+    setInterval(scanForVideos, 500);
   }
 
   if (document.readyState === 'loading') {

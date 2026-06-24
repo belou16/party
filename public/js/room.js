@@ -522,30 +522,39 @@
     appendSystemMessage(`${escapeHtml(data.username)} left`);
   });
 
-  // â”€â”€ sync-play â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Sync command scheduler (debounced + Math.max quiet window) ─────────────────
+  // When Rumble/video seeks, it fires pause+play internally. A sends seek+pause+play
+  // in a burst. We debounce so only the final command executes, and Math.max ensures
+  // a later sync-pause can never shrink the 3s quiet window set by sync-seek.
+  let _syncDebounce = { timer: null, op: null, t: null };
+  function _scheduleSyncCmd(op, t, quietMs) {
+    syncedUntil = Math.max(syncedUntil, Date.now() + quietMs);
+    clearTimeout(_syncDebounce.timer);
+    _syncDebounce.op = op; _syncDebounce.t = t;
+    _syncDebounce.timer = setTimeout(() => {
+      if (!player) return;
+      if (_syncDebounce.op === 'play')  player.play(_syncDebounce.t);
+      if (_syncDebounce.op === 'pause') player.pause(_syncDebounce.t);
+      if (_syncDebounce.op === 'seek')  player.seekTo(_syncDebounce.t);
+    }, 60);
+  }
+
+  // ── sync-play ────────────────────────────────────────────────────────────────────
   socket.on('sync-play', ({ currentTime }) => {
     if (!player) return;
-    syncedUntil = Date.now() + 500;
-    
-    player.play(currentTime);
-
+    _scheduleSyncCmd('play', currentTime, 1000);
   });
 
-  // â”€â”€ sync-pause â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── sync-pause ───────────────────────────────────────────────────────────────────
   socket.on('sync-pause', ({ currentTime }) => {
     if (!player) return;
-    syncedUntil = Date.now() + 500;
-    player.pause(currentTime);
-
+    _scheduleSyncCmd('pause', currentTime, 1000);
   });
 
-  // â”€â”€ sync-seek â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── sync-seek ────────────────────────────────────────────────────────────────────
   socket.on('sync-seek', ({ currentTime }) => {
     if (!player) return;
-    syncedUntil = Date.now() + 3000; // seek needs longer (buffering);
-    
-    player.seekTo(currentTime);
-
+    _scheduleSyncCmd('seek', currentTime, 3000);
   });
 
   // â”€â”€ chat-message â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

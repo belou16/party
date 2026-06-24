@@ -529,6 +529,9 @@
 
         <!-- Mode IFRAME : Rumble / YouTube / Vimeo -->
         <div id="iframe-wrapper">
+          <!-- YouTube: YT.Player monte ici (API native, pas de reload) -->
+          <div id="yt-player" style="display:none;position:absolute;inset:0;"></div>
+          <!-- Rumble / Vimeo : iframe classique -->
           <iframe id="video-iframe" src="about:blank" frameborder="0"
                   allowfullscreen allow="autoplay; fullscreen; picture-in-picture"></iframe>
           <!-- Contrôles sync en HAUT (ne gêne pas les contrôles natifs en bas) -->
@@ -779,32 +782,255 @@
   }
 
   /* ══════════════════════════════════════════════════════════════
-     IframeSyncManager — MODE IFRAME (Rumble / YouTube / Vimeo)
+     YOUTUBE MANAGER — YT IFrame Player API (aucun reload)
+     Comme Teleparty : playVideo / pauseVideo / seekTo en live
   ══════════════════════════════════════════════════════════════ */
-  class IframeSyncManager {
-    constructor({ socket, roomId, videoId, mode, duration, initialState }) {
-      this.socket      = socket;
-      this.roomId      = roomId;
-      this.videoId     = videoId;
-      this.mode        = mode;
-      this._duration   = duration || 0;
-      this._isPlaying  = false;
-      this._position   = 0;
-      this._startedAt  = Date.now();
-      this._clockTimer = null;
+  function _loadYTApi(cb) {
+    if (window.YT && window.YT.Player) { cb(); return; }
+    window.__ytQ = window.__ytQ || [];
+    window.__ytQ.push(cb);
+    if (!window.__ytLoading) {
+      window.__ytLoading = true;
+      window.onYouTubeIframeAPIReady = function() {
+        (window.__ytQ || []).forEach(fn => fn());
+        window.__ytQ = [];
+      };
+      var s = document.createElement('script');
+      s.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(s);
+    }
+  }
+
+  class YouTubeManager {
+    constructor({ socket, roomId, videoId, initialState }) {
+      this._socket   = socket;
+      this._roomId   = roomId;
+      this._videoId  = videoId;
+      this._player   = null;
+      this._applying = false;
+      this._pending  = initialState || null;
+      this._prevTime = 0;
       this._setupSocket();
-      this._startClock();
-      // Appliquer l'état initial reçu du serveur
+      this._createPlayer();
+    }
+
+    _createPlayer() {
+      _loadYTApi(() => {
+        var p = this._pending;
+        var pos = p
+          ? (p.isPlaying ? p.position + (Date.now() - p.sentAt) / 1000 : p.position)
+          : 0;
+        this._player = new YT.Player('yt-player', {
+          height: '100%', width: '100%',
+          videoId: this._videoId,
+          playerVars: {
+            start:          Math.floor(Math.max(0, pos)),
+            autoplay:       (p && p.isPlaying) ? 1 : 0,
+            enablejsapi:    1,
+            rel:            0,
+            modestbranding: 1,
+          },
+          events: {
+            onReady:       () => { hideStatus(); this._pending = null; },
+            onStateChange: (e) => this._onStateChange(e),
+          },
+        });
+      });
+    }
+
+    _onStateChange(event) {
+      if (this._applying || !this._player) return;
+      var state = event.data;
+      var pos   = this._player.getCurrentTime();
+      if (state === YT.PlayerState.PLAYING) {
+        var drift = Math.abs(pos - this._prevTime);
+        if (drift > 3 && this._prevTime > 0) {
+          this._socket.emit('seek', { roomId: this._roomId, position: pos, isPlaying: true });
+        } else {
+          this._socket.emit('play', { roomId: this._roomId, position: pos });
+        }
+        this._prevTime = pos;
+        this._setBtn(false);
+      } else if (state === YT.PlayerState.PAUSED) {
+        this._socket.emit('pause', { roomId: this._roomId, position: pos });
+        this._prevTime = pos;
+        this._setBtn(true);
+      }
+    }
+
+    _applyState({ isPlaying, position, sentAt }) {
+      var lat    = sentAt ? (Date.now() - sentAt) / 1000 : 0;
+      var target = isPlaying ? position + lat : position;
+      if (!this._player) { this._pending = { isPlaying, position: target, sentAt: Date.now() }; return; }
+      this._applying = true;
+      this._player.seekTo(target, true);
+      this._prevTime = target;
+      if (isPlaying) this._player.playVideo();
+      else           this._player.pauseVideo();
+      this._setBtn(!isPlaying);
+      setTimeout(() => { this._applying = false; }, 700);
+    }
+
+    _setBtn(showPlay) {
+      var pb = document.getElementById('iframe-play-btn');
+      var pp = document.getElementById('iframe-pause-btn');
+      if (pb) pb.style.display = showPlay ? '' : 'none';
+      if (pp) pp.style.display = showPlay ? 'none' : '';
+    }
+
+    _setupSocket() {
+      this._socket.on('play',  (d) => this._applyState({ isPlaying: true,  position: d.position, sentAt: d.sentAt }));
+      this._socket.on('pause', (d) => this._applyState({ isPlaying: false, position: d.position, sentAt: d.sentAt }));
+      this._socket.on('seek',  (d) => this._applyState({ isPlaying: d.isPlaying, position: d.position, sentAt: d.sentAt }));
+      this._socket.on('sync',  (d) => this._applyState({ isPlaying: d.isPlaying, position: d.position, sentAt: d.sentAt }));
+    }
+
+    getCurrentPosition() { return this._player ? this._player.getCurrentTime() : 0; }
+    isPlaying() { return this._player && this._player.getPlayerState() === YT.PlayerState.PLAYING; }
+
+    play() {
+      this._socket.emit('play', { roomId: this._roomId, position: this.getCurrentPosition() });
+      if (this._player) { this._player.playVideo(); this._setBtn(false); }
+    }
+    pause() {
+      this._socket.emit('pause', { roomId: this._roomId, position: this.getCurrentPosition() });
+      if (this._player) { this._player.pauseVideo(); this._setBtn(true); }
+    }
+    seek(p) {
+      var pos = Math.max(0, p);
+      this._socket.emit('seek', { roomId: this._roomId, position: pos, isPlaying: this.isPlaying() });
+      if (this._player) this._player.seekTo(pos, true);
+    }
+    seekRelative(d) { this.seek(this.getCurrentPosition() + d); }
+
+    destroy() {
+      ['play','pause','seek','sync'].forEach(e => this._socket.off(e));
+      if (this._player) this._player.destroy();
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     VIMEO MANAGER — postMessage API (aucun reload)
+  ══════════════════════════════════════════════════════════════ */
+  class VimeoManager {
+    constructor({ socket, roomId, videoId, initialState }) {
+      this._socket    = socket;
+      this._roomId    = roomId;
+      this._applying  = false;
+      this._position  = 0;
+      this._playing   = false;
+      this._iframe    = document.getElementById('video-iframe');
+      this._onMsg     = (e) => this._handleMsg(e);
+      window.addEventListener('message', this._onMsg);
+
+      var p   = initialState || {};
+      var pos = p.isPlaying ? (p.position + (Date.now() - p.sentAt) / 1000) : (p.position || 0);
+      this._iframe.src = 'https://player.vimeo.com/video/' + videoId +
+        '?api=1&autoplay=' + (p.isPlaying ? 1 : 0) + '#t=' + Math.floor(pos) + 's';
+
+      this._setupSocket();
+    }
+
+    _post(obj) {
+      if (this._iframe && this._iframe.contentWindow)
+        this._iframe.contentWindow.postMessage(JSON.stringify(obj), 'https://player.vimeo.com');
+    }
+
+    _handleMsg(event) {
+      if (!event.origin.includes('vimeo.com')) return;
+      try {
+        var d = JSON.parse(event.data);
+        if (d.event === 'ready') {
+          ['play','pause','timeupdate'].forEach(ev => this._post({ method: 'addEventListener', value: ev }));
+          hideStatus();
+        } else if (d.event === 'play' && !this._applying) {
+          this._playing = true;
+          this._socket.emit('play', { roomId: this._roomId, position: this._position });
+          this._setBtn(false);
+        } else if (d.event === 'pause' && !this._applying) {
+          this._playing = false;
+          this._socket.emit('pause', { roomId: this._roomId, position: this._position });
+          this._setBtn(true);
+        } else if (d.event === 'timeupdate' && d.data) {
+          this._position = d.data.seconds;
+        }
+      } catch (_) {}
+    }
+
+    _applyState({ isPlaying, position, sentAt }) {
+      var lat    = sentAt ? (Date.now() - sentAt) / 1000 : 0;
+      var target = isPlaying ? position + lat : position;
+      this._applying = true;
+      this._post({ method: 'setCurrentTime', value: target });
+      if (isPlaying) this._post({ method: 'play' });
+      else           this._post({ method: 'pause' });
+      this._setBtn(!isPlaying);
+      setTimeout(() => { this._applying = false; }, 700);
+    }
+
+    _setBtn(showPlay) {
+      var pb = document.getElementById('iframe-play-btn');
+      var pp = document.getElementById('iframe-pause-btn');
+      if (pb) pb.style.display = showPlay ? '' : 'none';
+      if (pp) pp.style.display = showPlay ? 'none' : '';
+    }
+
+    _setupSocket() {
+      this._socket.on('play',  (d) => this._applyState({ isPlaying: true,  position: d.position, sentAt: d.sentAt }));
+      this._socket.on('pause', (d) => this._applyState({ isPlaying: false, position: d.position, sentAt: d.sentAt }));
+      this._socket.on('seek',  (d) => this._applyState({ isPlaying: d.isPlaying, position: d.position, sentAt: d.sentAt }));
+      this._socket.on('sync',  (d) => this._applyState({ isPlaying: d.isPlaying, position: d.position, sentAt: d.sentAt }));
+    }
+
+    getCurrentPosition() { return this._position; }
+    isPlaying() { return this._playing; }
+
+    play() {
+      this._socket.emit('play', { roomId: this._roomId, position: this._position });
+      this._post({ method: 'play' }); this._setBtn(false);
+    }
+    pause() {
+      this._socket.emit('pause', { roomId: this._roomId, position: this._position });
+      this._post({ method: 'pause' }); this._setBtn(true);
+    }
+    seek(p) {
+      var pos = Math.max(0, p);
+      this._socket.emit('seek', { roomId: this._roomId, position: pos, isPlaying: this._playing });
+      this._post({ method: 'setCurrentTime', value: pos });
+    }
+    seekRelative(d) { this.seek(this._position + d); }
+
+    destroy() {
+      ['play','pause','seek','sync'].forEach(e => this._socket.off(e));
+      window.removeEventListener('message', this._onMsg);
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     RUMBLE MANAGER — reload iframe (pas d'API publique)
+  ══════════════════════════════════════════════════════════════ */
+  class RumbleManager {
+    constructor({ socket, roomId, videoId, initialState }) {
+      this.socket     = socket;
+      this.roomId     = roomId;
+      this.videoId    = videoId;
+      this._isPlaying = false;
+      this._position  = 0;
+      this._startedAt = Date.now();
+
+      this._setupSocket();
       if (initialState) this._apply(initialState);
     }
+
     getCurrentPosition() {
       if (!this._isPlaying) return this._position;
       return this._position + (Date.now() - this._startedAt) / 1000;
     }
+
     play() {
       var pos = this.getCurrentPosition();
       this.socket.emit('play', { roomId: this.roomId, position: pos });
-      this._apply({ isPlaying: true,  position: pos, sentAt: Date.now() });
+      this._apply({ isPlaying: true, position: pos, sentAt: Date.now() });
     }
     pause() {
       var pos = this.getCurrentPosition();
@@ -817,48 +1043,38 @@
       this._apply({ isPlaying: this._isPlaying, position: pos, sentAt: Date.now() });
     }
     seekRelative(d) { this.seek(this.getCurrentPosition() + d); }
+
     _apply({ isPlaying, position, sentAt }) {
       var lat    = (Date.now() - (sentAt || Date.now())) / 1000;
       var target = isPlaying ? position + lat : position;
       this._isPlaying = isPlaying;
       this._position  = target;
       this._startedAt = Date.now();
-      this._reloadIframe(target, isPlaying);
-      this._updateUI();
-    }
-    _reloadIframe(position, isPlaying) {
       var iframe = document.getElementById('video-iframe');
-      if (!iframe) return;
-      var url = buildEmbedUrl(this.mode, this.videoId, position, isPlaying);
-      if (url && iframe.src !== url) iframe.src = url;
+      if (iframe) {
+        var url = buildEmbedUrl('rumble', this.videoId, target, isPlaying);
+        if (url && iframe.src !== url) iframe.src = url;
+      }
       var pb = document.getElementById('iframe-play-btn');
       var pp = document.getElementById('iframe-pause-btn');
       if (pb) pb.style.display = isPlaying ? 'none' : '';
-      if (pp) pp.style.display = isPlaying ? ''     : 'none';
+      if (pp) pp.style.display = isPlaying ? '' : 'none';
     }
+
     _setupSocket() {
-      // Les guests reçoivent ces events APRÈS que le manager est créé :
       this.socket.on('play',  (d) => this._apply({ isPlaying: true,  position: d.position, sentAt: d.sentAt }));
-      this.socket.on('pause', (d) => this._apply({ isPlaying: false, position: d.position, sentAt: d.sentAt || Date.now() }));
+      this.socket.on('pause', (d) => this._apply({ isPlaying: false, position: d.position, sentAt: d.sentAt }));
       this.socket.on('seek',  (d) => this._apply({ isPlaying: d.isPlaying, position: d.position, sentAt: d.sentAt }));
+      this.socket.on('sync',  (d) => this._apply({ isPlaying: d.isPlaying, position: d.position, sentAt: d.sentAt }));
       this.socket.on('video_set', (d) => {
-        this.mode = d.mode; this.videoId = d.videoId;
+        this.videoId = d.videoId;
         this._isPlaying = false; this._position = 0;
-        this._reloadIframe(0, false);
+        this._apply({ isPlaying: false, position: 0, sentAt: Date.now() });
       });
     }
-    _startClock() { this._clockTimer = setInterval(() => this._updateUI(), 500); }
-    _updateUI() {
-      var pos  = this.getCurrentPosition();
-      var pct  = this._duration > 0 ? Math.min(100, (pos / this._duration) * 100) : 0;
-      var fill = document.getElementById('progress-fill');
-      var time = document.getElementById('iframe-time');
-      if (fill) fill.style.width = pct + '%';
-      if (time) time.textContent = formatTime(pos) + ' / ' + (this._duration > 0 ? formatTime(this._duration) : '--:--');
-    }
+
     destroy() {
-      clearInterval(this._clockTimer);
-      ['play','pause','seek','video_set'].forEach(e => this.socket.off(e));
+      ['play','pause','seek','sync','video_set'].forEach(e => this.socket.off(e));
     }
   }
 
@@ -929,7 +1145,8 @@
     var track = document.getElementById('progress-track');
     var rect  = track.getBoundingClientRect();
     var ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-    iframeMgr.seek(ratio * (iframeMgr._duration > 0 ? iframeMgr._duration : 7200));
+    var dur = iframeMgr._duration > 0 ? iframeMgr._duration : 7200;
+    iframeMgr.seek(ratio * dur);
   }
 
   function shareRoom() {
@@ -999,28 +1216,35 @@
       });
 
     } else {
-      /* ── Mode iframe (Rumble / YouTube / Vimeo) ────────────── */
+      /* ── Mode iframe (YouTube / Vimeo / Rumble) ────────────── */
       document.getElementById('video-direct').style.display   = 'none';
       document.getElementById('iframe-wrapper').style.display = 'block';
       setStatusLoading('Chargement de la vidéo…');
 
-      var iframe = document.getElementById('video-iframe');
-      // Charger à la position actuelle avec l'état de lecture actuel
-      var pos      = syncData.isPlaying
-        ? syncData.position + (Date.now() - syncData.sentAt) / 1000
-        : syncData.position;
-      iframe.src = buildEmbedUrl(mode, videoId, pos, syncData.isPlaying);
-      iframe.addEventListener('load', hideStatus, { once: true });
-      setTimeout(hideStatus, 5000);
+      if (mode === 'youtube') {
+        /* YouTube : YT IFrame Player API — aucun reload */
+        document.getElementById('yt-player').style.display    = 'block';
+        document.getElementById('video-iframe').style.display = 'none';
+        iframeMgr = new YouTubeManager({ socket, roomId, videoId, initialState: syncData });
 
-      iframeMgr = new IframeSyncManager({
-        socket:       socket,
-        roomId:       roomId,
-        videoId:      videoId,
-        mode:         mode,
-        duration:     durationSec,
-        initialState: syncData,   // état initial directement depuis le serveur
-      });
+      } else if (mode === 'vimeo') {
+        /* Vimeo : postMessage API — aucun reload */
+        document.getElementById('yt-player').style.display    = 'none';
+        document.getElementById('video-iframe').style.display = 'block';
+        var vimeoIframe = document.getElementById('video-iframe');
+        vimeoIframe.addEventListener('load', hideStatus, { once: true });
+        setTimeout(hideStatus, 6000);
+        iframeMgr = new VimeoManager({ socket, roomId, videoId, initialState: syncData });
+
+      } else {
+        /* Rumble (et autres) : reload iframe — pas d'API publique */
+        document.getElementById('yt-player').style.display    = 'none';
+        document.getElementById('video-iframe').style.display = 'block';
+        var rumbleIframe = document.getElementById('video-iframe');
+        rumbleIframe.addEventListener('load', hideStatus, { once: true });
+        setTimeout(hideStatus, 6000);
+        iframeMgr = new RumbleManager({ socket, roomId, videoId, initialState: syncData });
+      }
     }
   }
 

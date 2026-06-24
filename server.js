@@ -1,48 +1,59 @@
-const express  = require('express');
-const http     = require('http');
-const https    = require('https');
-const zlib     = require('zlib');
+const express = require('express');
+const http    = require('http');
+const https   = require('https');
+const zlib    = require('zlib');
 const { Server } = require('socket.io');
-const path     = require('path');
-const { URL }  = require('url');
-const fs       = require('fs');
+const path    = require('path');
+const { URL } = require('url');
+const fs      = require('fs');
 
 const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server, {
-  cors: { origin: '*' },
+  cors:       { origin: '*' },
   transports: ['polling', 'websocket'],
 });
 
 const PORT = process.env.PORT || 3000;
+const SYNC_SCRIPT = fs.readFileSync(path.join(__dirname, 'public', 'js', 'doro-sync.js'), 'utf8');
 
-const SYNC_SCRIPT = fs.readFileSync(
-  path.join(__dirname, 'public', 'js', 'doro-sync.js'), 'utf8'
-);
-
-// ── Rooms ─────────────────────────────────────────────────────────────────
+// ── Room store ──────────────────────────────────────────────────────────────
 const rooms = new Map();
 
-function getOrCreateRoom(roomId) {
+function getRoom(roomId) {
   if (!rooms.has(roomId)) {
     rooms.set(roomId, {
-      videoUrl: '', currentTime: 0, isPlaying: false, playedAt: 0,
-      hostId: null, users: new Map(),
+      isPlaying:     false,
+      position:      0,         // seconds at the time of lastUpdatedAt
+      lastUpdatedAt: Date.now(),
+      hostId:        null,
+      videoUrl:      '',
+      users:         new Map(), // socketId → { id, username }
     });
   }
   return rooms.get(roomId);
 }
-function getRoomUsers(room) { return Array.from(room.users.values()); }
 
-// ── Static files ──────────────────────────────────────────────────────────
+// The server is the single source of truth. When the video is playing we must
+// project the stored position forward by elapsed time so late-joiners never
+// land seconds behind the current position.
+function getProjectedPosition(room) {
+  if (!room.isPlaying) return room.position;
+  return room.position + (Date.now() - room.lastUpdatedAt) / 1000;
+}
+
+function getRoomUsers(room) {
+  return Array.from(room.users.values());
+}
+
+// ── Static files ────────────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('/room/:roomId', (_req, res) =>
-  res.sendFile(path.join(__dirname, 'public', 'room.html'))
-);
+app.get('/room/:roomId', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'room.html'));
+});
 
-﻿// ── Rumble embed resolver ─────────────────────────────────────────────────
-// Calls Rumble's oEmbed API to get the correct embed URL from a page URL.
+// ── Rumble embed resolver ────────────────────────────────────────────────────
 // Rumble page IDs (v4wv296) differ from embed IDs (v4ue2sl); oEmbed bridges them.
 app.get('/api/rumble-embed', (req, res) => {
   const rawUrl = req.query.url;
@@ -72,24 +83,28 @@ app.get('/api/rumble-embed', (req, res) => {
       }
     });
   });
-  req2.on('error', e => res.status(502).json({ error: e.message }));
+  req2.on('error',   e  => res.status(502).json({ error: e.message }));
   req2.on('timeout', () => { req2.destroy(); res.status(504).json({ error: 'Timeout' }); });
   req2.end();
 });
 
-// ── Proxy endpoint ────────────────────────────────────────────────────────
+// ── Proxy endpoint ───────────────────────────────────────────────────────────
+// Fetches a remote page server-side, strips X-Frame-Options / CSP,
+// injects a <base> tag + our sync script so postMessage sync works.
 app.get('/proxy', (req, res) => {
   const rawUrl = req.query.url;
   if (!rawUrl) return res.status(400).send('Missing url parameter');
 
   let parsed;
-  try { parsed = new URL(rawUrl); }
-  catch (_) { return res.status(400).send('Invalid URL'); }
+  try { parsed = new URL(rawUrl); } catch (_) {
+    return res.status(400).send('Invalid URL');
+  }
 
+  // Block SSRF attempts against local / private addresses
   const host = parsed.hostname.toLowerCase();
   if (
-    host === 'localhost'     ||
-    host.startsWith('127.') ||
+    host === 'localhost'      ||
+    host.startsWith('127.')   ||
     host.startsWith('192.168.') ||
     host === '::1'
   ) {
@@ -118,7 +133,6 @@ app.get('/proxy', (req, res) => {
       'Accept-Language': 'en-US,en;q=0.9',
       'Accept-Encoding': 'identity',
       'Connection':      'close',
-      // Send a realistic Referer/Origin so sites don't block hotlinking
       'Referer':         parsed.origin + '/',
       'Origin':          parsed.origin,
     },
@@ -130,14 +144,11 @@ app.get('/proxy', (req, res) => {
       const loc = proxyRes.headers['location'];
       if (loc) {
         const next = new URL(loc, rawUrl).toString();
-        return sendOnce(() =>
-          res.redirect('/proxy?url=' + encodeURIComponent(next))
-        );
+        return sendOnce(() => res.redirect('/proxy?url=' + encodeURIComponent(next)));
       }
     }
 
     const contentType = proxyRes.headers['content-type'] || '';
-
     if (!contentType.includes('text/html')) {
       responded = true;
       const fwd = {};
@@ -149,8 +160,8 @@ app.get('/proxy', (req, res) => {
     }
 
     let body = '';
-    let stream = proxyRes;
     const enc = proxyRes.headers['content-encoding'];
+    let stream = proxyRes;
     if (enc === 'gzip')    stream = proxyRes.pipe(zlib.createGunzip());
     else if (enc === 'br') stream = proxyRes.pipe(zlib.createBrotliDecompress());
 
@@ -160,7 +171,7 @@ app.get('/proxy', (req, res) => {
       sendOnce(() => res.status(502).send('Decompress error: ' + err.message))
     );
     stream.on('end', () => {
-      // Inject sync script BEFORE <base> tag
+      // Inject sync script BEFORE <base> so relative URLs don't break it
       const injection =
         '<script>\n' + SYNC_SCRIPT + '\n</script>\n' +
         '<base href="' + rawUrl + '" />';
@@ -169,32 +180,26 @@ app.get('/proxy', (req, res) => {
       const headMatch = modified.match(/<head(\s[^>]*)?>/i);
       if (headMatch) {
         const idx = modified.indexOf(headMatch[0]) + headMatch[0].length;
-        modified =
-          modified.slice(0, idx) + '\n' + injection + '\n' +
-          modified.slice(idx);
+        modified = modified.slice(0, idx) + '\n' + injection + '\n' + modified.slice(idx);
       } else {
         modified = injection + '\n' + modified;
       }
 
-      // Rewrite video-embed iframes (allowfullscreen) so they also pass
-      // through our proxy and get the sync script injected inside them.
-      modified = modified.replace(
-        /<iframe([^>]*)>/gi,
-        function (match, attrs) {
-          if (!/allowfullscreen|allow\s*=\s*["'][^"']*(?:autoplay|fullscreen)/i.test(attrs)) {
-            return match;
-          }
-          return match.replace(
-            /(\bsrc\s*=\s*["'])(https?:\/\/[^"']+)(["'])/i,
-            function (m, prefix, iframeSrc, suffix) {
-              try {
-                const resolved = new URL(iframeSrc, rawUrl).toString();
-                return prefix + '/proxy?url=' + encodeURIComponent(resolved) + suffix;
-              } catch (_) { return m; }
-            }
-          );
+      // Rewrite video-embed iframes so they also go through the proxy
+      modified = modified.replace(/<iframe([^>]*)>/gi, (match, attrs) => {
+        if (!/allowfullscreen|allow\s*=\s*["'][^"']*(?:autoplay|fullscreen)/i.test(attrs)) {
+          return match;
         }
-      );
+        return match.replace(
+          /(\bsrc\s*=\s*["'])(https?:\/\/[^"']+)(["'])/i,
+          (m, prefix, iframeSrc, suffix) => {
+            try {
+              const resolved = new URL(iframeSrc, rawUrl).toString();
+              return prefix + '/proxy?url=' + encodeURIComponent(resolved) + suffix;
+            } catch (_) { return m; }
+          }
+        );
+      });
 
       sendOnce(() => {
         res.removeHeader('Content-Security-Policy');
@@ -212,102 +217,133 @@ app.get('/proxy', (req, res) => {
   proxyReq.on('error', err =>
     sendOnce(() => res.status(502).send('Proxy error: ' + err.message))
   );
-
   proxyReq.end();
 });
 
-// ── Socket.io ─────────────────────────────────────────────────────────────
-io.on('connection', socket => {
-  let currentRoomId   = null;
+// ── Socket.io ────────────────────────────────────────────────────────────────
+io.on('connection', (socket) => {
+  let joinedRoom      = null;
   let currentUsername = null;
 
-  socket.on('join-room', ({ roomId, username, videoUrl }) => {
-    if (!roomId || !username) return;
-    currentRoomId   = roomId;
-    currentUsername = username;
+  socket.on('join', ({ roomId, username, videoUrl }) => {
+    if (!roomId) return;
+    joinedRoom      = roomId;
+    currentUsername = (username || 'Viewer').slice(0, 32);
+
     socket.join(roomId);
+    const room = getRoom(roomId);
 
-    const room = getOrCreateRoom(roomId);
-    if (!room.hostId)             room.hostId  = socket.id;
+    // First joiner becomes host
+    if (!room.hostId) {
+      room.hostId = socket.id;
+      socket.emit('you_are_host');
+    }
+
     if (videoUrl && !room.videoUrl) room.videoUrl = videoUrl;
-    room.users.set(socket.id, { id: socket.id, username });
+    room.users.set(socket.id, { id: socket.id, username: currentUsername });
 
-    const liveTime = (room.isPlaying && room.playedAt)
-      ? room.currentTime + (Date.now() - room.playedAt) / 1000
-      : room.currentTime;
-
-    socket.emit('room-state', {
-      videoUrl:    room.videoUrl,
-      currentTime: liveTime,
-      isPlaying:   room.isPlaying,
-      hostId:      room.hostId,
-      users:       getRoomUsers(room),
+    // Send the joiner a projected current state (never raw stored position)
+    socket.emit('sync', {
+      isPlaying: room.isPlaying,
+      position:  getProjectedPosition(room),
+      sentAt:    Date.now(),
+      isHost:    room.hostId === socket.id,
+      videoUrl:  room.videoUrl,
+      users:     getRoomUsers(room),
+      hostId:    room.hostId,
     });
-    socket.to(roomId).emit('user-joined', {
-      id: socket.id, username, users: getRoomUsers(room),
-    });
-  });
 
-  socket.on('play', ({ roomId, currentTime }) => {
-    const room = rooms.get(roomId); if (!room) return;
-    room.isPlaying = true; room.currentTime = currentTime; room.playedAt = Date.now();
-    socket.to(roomId).emit('sync-play', { currentTime });
-  });
-
-  socket.on('pause', ({ roomId, currentTime }) => {
-    const room = rooms.get(roomId); if (!room) return;
-    room.isPlaying = false; room.currentTime = currentTime; room.playedAt = 0;
-    socket.to(roomId).emit('sync-pause', { currentTime });
-  });
-
-  socket.on('seek', ({ roomId, currentTime }) => {
-    const room = rooms.get(roomId); if (!room) return;
-    room.currentTime = currentTime;
-    if (room.isPlaying) room.playedAt = Date.now();
-    socket.to(roomId).emit('sync-seek', { currentTime });
-  });
-
-  socket.on('heartbeat', ({ roomId, currentTime }) => {
-    const room = rooms.get(roomId);
-    if (!room || room.hostId !== socket.id) return;
-    socket.to(roomId).emit('sync-heartbeat', { currentTime });
-  });
-
-  socket.on('chat-message', ({ roomId, username, message }) => {
-    if (!roomId || !username || !message) return;
-    const trimmed = message.trim(); if (!trimmed) return;
-    io.to(roomId).emit('chat-message', {
-      username, message: trimmed, timestamp: Date.now(),
+    // Tell everyone else a new viewer arrived
+    const count = io.sockets.adapter.rooms.get(roomId)?.size ?? 0;
+    socket.to(roomId).emit('viewer_joined', {
+      count,
+      user:  { id: socket.id, username: currentUsername },
+      users: getRoomUsers(room),
     });
   });
 
-  socket.on('set-video', ({ roomId, videoUrl }) => {
+  socket.on('play', ({ roomId, position }) => {
+    const room = rooms.get(roomId); if (!room) return;
+    Object.assign(room, { isPlaying: true, position, lastUpdatedAt: Date.now() });
+    // Relay to others only — never echo back to sender
+    socket.to(roomId).emit('play', { position, sentAt: Date.now() });
+  });
+
+  socket.on('pause', ({ roomId, position }) => {
+    const room = rooms.get(roomId); if (!room) return;
+    Object.assign(room, { isPlaying: false, position, lastUpdatedAt: Date.now() });
+    socket.to(roomId).emit('pause', { position, sentAt: Date.now() });
+  });
+
+  socket.on('seek', ({ roomId, position, isPlaying }) => {
+    const room = rooms.get(roomId); if (!room) return;
+    Object.assign(room, {
+      position,
+      isPlaying:     isPlaying ?? room.isPlaying,
+      lastUpdatedAt: Date.now(),
+    });
+    socket.to(roomId).emit('seek', { position, isPlaying: room.isPlaying, sentAt: Date.now() });
+  });
+
+  // Non-host clients poll every 5s for a projected tick to correct drift
+  socket.on('request_sync', ({ roomId }) => {
+    const room = rooms.get(roomId); if (!room) return;
+    socket.emit('sync_tick', {
+      isPlaying: room.isPlaying,
+      position:  getProjectedPosition(room),
+      sentAt:    Date.now(),
+    });
+  });
+
+  // Chat is broadcast to ALL in the room (including sender)
+  socket.on('chat', ({ roomId, name, msg }) => {
+    if (!roomId || !msg?.trim()) return;
+    io.to(roomId).emit('chat', { name: name || 'Anonymous', msg: msg.trim() });
+  });
+
+  // Host-only: change the video URL for everyone
+  socket.on('set_video', ({ roomId, videoUrl }) => {
     const room = rooms.get(roomId); if (!room) return;
     if (room.hostId !== socket.id) return;
-    room.videoUrl = videoUrl; room.currentTime = 0; room.isPlaying = false;
-    io.to(roomId).emit('video-changed', { videoUrl });
+    Object.assign(room, { videoUrl, position: 0, isPlaying: false, lastUpdatedAt: Date.now() });
+    io.to(roomId).emit('video_changed', { videoUrl });
   });
 
   socket.on('disconnect', () => {
-    if (!currentRoomId) return;
-    const room = rooms.get(currentRoomId); if (!room) return;
+    if (!joinedRoom) return;
+    const room = rooms.get(joinedRoom); if (!room) return;
+
     room.users.delete(socket.id);
-    if (room.hostId === socket.id) {
-      const next = Array.from(room.users.keys());
-      room.hostId = next.length ? next[0] : null;
+
+    if (room.hostId !== socket.id) {
+      // Non-host left: just notify the room
+      if (room.users.size === 0) {
+        rooms.delete(joinedRoom);
+      } else {
+        io.to(joinedRoom).emit('user_left', {
+          id:       socket.id,
+          username: currentUsername,
+          users:    getRoomUsers(room),
+          hostId:   room.hostId,
+        });
+      }
+      return;
     }
-    if (room.users.size === 0) {
-      rooms.delete(currentRoomId);
-    } else {
-      io.to(currentRoomId).emit('user-left', {
-        id: socket.id, username: currentUsername,
-        hostId: room.hostId, users: getRoomUsers(room),
+
+    // Host left: promote next viewer, or clean up the room
+    const members = io.sockets.adapter.rooms.get(joinedRoom);
+    if (members?.size > 0) {
+      const newHostId = [...members][0];
+      room.hostId     = newHostId;
+      io.to(newHostId).emit('you_are_host');
+      io.to(joinedRoom).emit('host_changed', {
+        hostId: newHostId,
+        users:  getRoomUsers(room),
       });
+    } else {
+      rooms.delete(joinedRoom);
     }
   });
 });
 
-// ── Start ─────────────────────────────────────────────────────────────────
-server.listen(PORT, () =>
-  console.log('Server running on http://localhost:' + PORT)
-);
+server.listen(PORT, () => console.log(`✅  Server on http://localhost:${PORT}`));

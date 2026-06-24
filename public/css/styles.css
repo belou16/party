@@ -338,6 +338,28 @@ ul { list-style: none; }
   border-color: transparent !important;
 }
 
+/* ── Status badge (host / viewer indicator) ─────────────────────────────── */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: 99px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.status-host {
+  background: rgba(124,58,237,0.18);
+  color: #a78bfa;
+  border: 1px solid rgba(124,58,237,0.35);
+}
+.status-viewer {
+  background: rgba(34,197,94,0.12);
+  color: #4ade80;
+  border: 1px solid rgba(34,197,94,0.28);
+}
+
 /* video wrapper */
 .video-wrapper {
   flex: 1;

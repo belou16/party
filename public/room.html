@@ -74,6 +74,7 @@
           <code id="room-id-display" class="room-id-code"></code>
         </div>
         <div class="topbar-actions">
+          <span id="status-badge" class="status-badge" aria-live="polite"></span>
           <button id="copy-link-btn" class="btn btn-ghost btn-sm">
             🔗 Copy Link
           </button>
@@ -157,6 +158,8 @@
 
   <!-- Socket.io client (served automatically by socket.io) -->
   <script src="/socket.io/socket.io.js"></script>
+  <!-- Sync manager — must load before room.js -->
+  <script src="/js/sync-client.js"></script>
   <script src="/js/room.js"></script>
 </body>
 </html>

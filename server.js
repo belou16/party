@@ -1,4 +1,4 @@
-const express    = require('express');
+﻿const express    = require('express');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const path       = require('path');
@@ -18,13 +18,14 @@ function getRoom(roomId) {
       position:      0,
       lastUpdatedAt: Date.now(),
       hostId:        null,
+      mode:          'direct',
+      videoId:       null,
+      embedUrl:      null,
     });
   }
   return rooms.get(roomId);
 }
 
-// Projects the stored position forward by elapsed time so late-joiners
-// never land behind where the video actually is.
 function getProjectedPosition(room) {
   if (!room.isPlaying) return room.position;
   return room.position + (Date.now() - room.lastUpdatedAt) / 1000;
@@ -50,13 +51,15 @@ io.on('connection', (socket) => {
       position:  getProjectedPosition(room),
       sentAt:    Date.now(),
       isHost:    room.hostId === socket.id,
+      mode:      room.mode,
+      videoId:   room.videoId,
+      embedUrl:  room.embedUrl,
     });
 
     const count = io.sockets.adapter.rooms.get(roomId)?.size ?? 0;
     io.to(roomId).emit('viewer_count', { count });
   });
 
-  // Any client can play/pause/seek — no host-only guard
   socket.on('play', ({ roomId, position }) => {
     if (!roomId) return;
     const room = getRoom(roomId);
@@ -78,7 +81,6 @@ io.on('connection', (socket) => {
     socket.to(roomId).emit('seek', { position, isPlaying, sentAt: Date.now() });
   });
 
-  // Non-host clients poll every 5s; server replies with a projected tick
   socket.on('request_sync', ({ roomId }) => {
     if (!roomId) return;
     const room = getRoom(roomId);
@@ -90,7 +92,6 @@ io.on('connection', (socket) => {
     });
   });
 
-  // Chat is broadcast to everyone in the room (including the sender)
   socket.on('chat', ({ roomId, name, msg }) => {
     if (!roomId || !msg?.trim()) return;
     io.to(roomId).emit('chat', {
@@ -98,6 +99,20 @@ io.on('connection', (socket) => {
       msg:  String(msg).slice(0, 300),
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     });
+  });
+
+  socket.on('set_video', ({ roomId, url, mode, videoId, embedUrl }) => {
+    if (!roomId) return;
+    const room = getRoom(roomId);
+    Object.assign(room, {
+      mode:          mode     || 'direct',
+      videoId:       videoId  || null,
+      embedUrl:      embedUrl || null,
+      position:      0,
+      isPlaying:     false,
+      lastUpdatedAt: Date.now(),
+    });
+    io.to(roomId).emit('video_set', { url, mode, videoId, embedUrl });
   });
 
   socket.on('disconnect', () => {

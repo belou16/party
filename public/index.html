@@ -17,6 +17,7 @@
       --accent:       #6C63FF;
       --accent-hover: #5A52E0;
       --danger:       #EF4444;
+      --success:      #22C55E;
       --radius-sm:    8px;
       --radius-lg:    20px;
       --radius-pill:  9999px;
@@ -30,13 +31,14 @@
       overflow: hidden;
     }
 
-    /* ── JOIN SCREEN ───────────────────────────────────────────────────── */
+    /* JOIN SCREEN */
     #join-screen {
       display: flex;
       align-items: center;
       justify-content: center;
       height: 100vh;
       padding: 20px;
+      overflow-y: auto;
     }
 
     .join-card {
@@ -45,7 +47,7 @@
       border-radius: var(--radius-lg);
       padding: 48px;
       width: 100%;
-      max-width: 420px;
+      max-width: 440px;
     }
 
     .join-logo    { text-align: center; font-size: 52px; margin-bottom: 16px; }
@@ -75,6 +77,14 @@
     .form-input::placeholder { color: var(--text-muted); }
     .form-input:focus { border-color: var(--accent); }
 
+    .url-hint {
+      margin-top: 7px;
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+    .url-hint .ok { color: var(--success); }
+
     .btn-join {
       width: 100%;
       background: var(--accent);
@@ -91,7 +101,7 @@
     .btn-join:hover  { background: var(--accent-hover); }
     .btn-join:active { transform: scale(0.98); }
 
-    /* ── PLAYER SCREEN ─────────────────────────────────────────────────── */
+    /* PLAYER SCREEN */
     #player-screen {
       display: none;
       flex-direction: column;
@@ -148,25 +158,100 @@
       min-height: 0;
     }
 
+    /* VIDEO CONTAINER */
     #video-container {
       flex: 1;
       background: #000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       overflow: hidden;
       min-width: 0;
       position: relative;
     }
 
-    #video {
+    #video-direct {
+      display: none;
       width: 100%;
       height: 100%;
       object-fit: contain;
+    }
+
+    #iframe-wrapper {
+      display: none;
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: #000;
+    }
+
+    #video-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
       display: block;
     }
 
-    /* Statut vidéo : chargement / erreur / placeholder */
+    #iframe-overlay {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,0.90) 55%);
+      padding: 44px 16px 14px;
+      opacity: 0;
+      transition: opacity 0.22s;
+      pointer-events: none;
+    }
+
+    #iframe-wrapper:hover #iframe-overlay {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #progress-track {
+      width: 100%;
+      height: 4px;
+      background: rgba(255,255,255,0.22);
+      border-radius: 2px;
+      cursor: pointer;
+      position: relative;
+      margin-bottom: 12px;
+      transition: height 0.1s;
+    }
+    #progress-track:hover { height: 6px; }
+
+    #progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      width: 0%;
+      pointer-events: none;
+      transition: width 0.5s linear;
+    }
+
+    #iframe-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #iframe-controls button {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.35);
+      color: #fff;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    #iframe-controls button:hover { background: rgba(255,255,255,0.18); }
+
+    #iframe-time {
+      font-size: 13px;
+      color: rgba(255,255,255,0.82);
+      font-variant-numeric: tabular-nums;
+      min-width: 120px;
+    }
+
+    /* STATUS OVERLAY */
     #video-status {
       display: none;
       position: absolute;
@@ -178,13 +263,13 @@
       gap: 16px;
       padding: 32px;
       text-align: center;
-      pointer-events: none;
+      z-index: 20;
     }
-    #video-status.visible { display: flex; pointer-events: auto; }
+    #video-status.visible { display: flex; }
 
     .vstatus-icon  { font-size: 48px; }
     .vstatus-title { font-size: 16px; font-weight: 600; color: var(--text); }
-    .vstatus-sub   { font-size: 13px; color: var(--text-muted); max-width: 340px; line-height: 1.5; }
+    .vstatus-sub   { font-size: 13px; color: var(--text-muted); max-width: 340px; line-height: 1.55; }
     .vstatus-pill  {
       background: var(--surface-2);
       border: 1px solid var(--border);
@@ -205,6 +290,7 @@
       animation: spin 0.8s linear infinite;
     }
 
+    /* CHAT */
     #chat-panel {
       width: 300px;
       flex-shrink: 0;
@@ -224,7 +310,6 @@
       padding: 0 16px;
       font-weight: 600;
       font-size: 14px;
-      gap: 6px;
     }
 
     #chat-messages {
@@ -248,7 +333,6 @@
     }
 
     .msg-chat { font-size: 13px; line-height: 1.45; }
-
     .msg-time { color: var(--text-muted); font-size: 11px; margin-right: 4px; }
     .msg-name { font-weight: 600; color: var(--accent); margin-right: 4px; }
     .msg-text { color: var(--text); word-break: break-word; }
@@ -289,7 +373,7 @@
     }
     #chat-send:hover { background: var(--accent-hover); }
 
-    /* ── OVERLAY "TAP TO START" ────────────────────────────────────────── */
+    /* OVERLAY TAP TO START */
     #play-overlay {
       display: none;
       position: fixed;
@@ -315,7 +399,6 @@
     #overlay-btn:hover  { transform: scale(1.03); }
     #overlay-btn:active { transform: scale(0.97); }
 
-    /* ── RESPONSIVE ────────────────────────────────────────────────────── */
     @media (max-width: 768px) {
       #main-area { flex-direction: column; }
       #chat-panel {
@@ -329,7 +412,7 @@
 </head>
 <body>
 
-  <!-- ── JOIN SCREEN ──────────────────────────────────────────────────── -->
+  <!-- JOIN SCREEN -->
   <div id="join-screen">
     <div class="join-card">
       <div class="join-logo">🎬</div>
@@ -349,16 +432,29 @@
       <div class="form-group">
         <label class="form-label" for="input-url">URL de la vidéo</label>
         <input id="input-url" class="form-input" type="url"
-               placeholder="https://…" autocomplete="off" />
+               placeholder="Rumble, YouTube, Vimeo… ou lien .mp4/.m3u8 direct"
+               autocomplete="off" />
+        <p class="url-hint">
+          <span class="ok">✅</span> rumble.com/v4wvj99…&nbsp;&nbsp;
+          <span class="ok">✅</span> youtube.com/watch?v=…&nbsp;&nbsp;
+          <span class="ok">✅</span> vimeo.com/…&nbsp;&nbsp;
+          <span class="ok">✅</span> film.mp4
+        </p>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="input-duration">
+          Durée de la vidéo (minutes, facultatif)
+        </label>
+        <input id="input-duration" class="form-input" type="number"
+               placeholder="ex: 90" min="0" max="600" />
       </div>
 
       <button class="btn-join" onclick="joinParty()">Rejoindre la party 🎉</button>
     </div>
   </div>
 
-  <!-- ── PLAYER SCREEN ────────────────────────────────────────────────── -->
+  <!-- PLAYER SCREEN -->
   <div id="player-screen">
-
     <div id="topbar">
       <div class="topbar-left">
         <span id="room-badge"      class="badge">🎬 room</span>
@@ -370,24 +466,32 @@
 
     <div id="main-area">
       <div id="video-container">
-        <video id="video" controls preload="auto"></video>
 
-        <!-- Statut : affiché par le JS selon l'état de la vidéo -->
+        <video id="video-direct" controls preload="metadata"></video>
+
+        <div id="iframe-wrapper">
+          <iframe id="video-iframe" src="about:blank" frameborder="0"
+                  allowfullscreen allow="autoplay; fullscreen; picture-in-picture"></iframe>
+          <div id="iframe-overlay">
+            <div id="progress-track" onclick="handleProgressClick(event)">
+              <div id="progress-fill"></div>
+            </div>
+            <div id="iframe-controls">
+              <button id="iframe-play-btn"  onclick="iframePlay()">▶</button>
+              <button id="iframe-pause-btn" onclick="iframePause()" style="display:none">⏸</button>
+              <span   id="iframe-time">0:00 / --:--</span>
+              <button onclick="iframeSeek(-10)">−10s</button>
+              <button onclick="iframeSeek(+10)">+10s</button>
+            </div>
+          </div>
+        </div>
+
         <div id="video-status" class="visible">
           <div class="vstatus-icon">🎬</div>
           <div class="vstatus-title">En attente d'une vidéo</div>
-          <div class="vstatus-sub">
-            Entre l'ID de la room, ton nom et un lien vidéo, puis clique sur
-            <strong>Rejoindre la party</strong>.
-          </div>
-          <div class="vstatus-sub">Formats supportés :</div>
-          <div class="vstatus-pills">
-            <span class="vstatus-pill">.mp4</span>
-            <span class="vstatus-pill">.webm</span>
-            <span class="vstatus-pill">.ogg</span>
-            <span class="vstatus-pill">.m3u8</span>
-          </div>
+          <div class="vstatus-sub">Remplis le formulaire et rejoins la party.</div>
         </div>
+
       </div>
 
       <div id="chat-panel">
@@ -400,34 +504,68 @@
         </div>
       </div>
     </div>
-
   </div>
 
-  <!-- ── OVERLAY TAP TO PLAY ──────────────────────────────────────────── -->
   <div id="play-overlay">
     <button id="overlay-btn">▶ Tap to start</button>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-  /* ══════════════════════════════════════════════════════════════════════
-     WatchPartySync — moteur de synchronisation
-     8 bugs corrigés :
-       1. Echo loop       → _isApplyingRemote flag + setTimeout 150ms
-       2. Joiner en retard → getProjectedPosition + compensation sentAt
-       3. Buffering pausé  → guards seeking + readyState < HAVE_FUTURE_DATA
-       4. Autoplay bloqué  → await play() + catch NotAllowedError + overlay
-       5. AudioContext mort → resume sur geste utilisateur
-       6. Hard-seek dérive → soft playbackRate si drift < 2s
-       7. Race seek + play → await 'seeked' avant play/pause
-       8. Guest pause ignoré → aucun guard isHost dans les listeners
-  ══════════════════════════════════════════════════════════════════════ */
+  function detectUrlType(url) {
+    try {
+      var u = new URL(url);
+      var host = u.hostname.replace(/^www\./, '');
+      var pathname = u.pathname;
+
+      if (host === 'rumble.com') {
+        var m = pathname.match(/^\/(v[a-z0-9]+)/i);
+        if (m) return { type: 'rumble', videoId: m[1], embedUrl: 'https://rumble.com/embed/' + m[1] + '/' };
+        var e = pathname.match(/^\/embed\/(v[a-z0-9]+)/i);
+        if (e) return { type: 'rumble', videoId: e[1], embedUrl: url };
+      }
+
+      if (host === 'youtube.com' || host === 'youtu.be') {
+        var vid = null;
+        if (host === 'youtu.be') {
+          vid = pathname.slice(1).split('?')[0];
+        } else {
+          vid = u.searchParams.get('v');
+          if (!vid) { var em = pathname.match(/\/embed\/([^/?]+)/); if (em) vid = em[1]; }
+        }
+        if (vid) return { type: 'youtube', videoId: vid,
+          embedUrl: 'https://www.youtube.com/embed/' + vid + '?enablejsapi=1' };
+      }
+
+      if (host === 'vimeo.com') {
+        var mv = pathname.match(/\/(\d+)/);
+        if (mv) return { type: 'vimeo', videoId: mv[1],
+          embedUrl: 'https://player.vimeo.com/video/' + mv[1] };
+      }
+
+      if (/\.(mp4|webm|ogg|m3u8|ogv|mov)(\?.*)?$/i.test(pathname))
+        return { type: 'direct', videoId: null, embedUrl: url };
+
+      return { type: 'direct', videoId: null, embedUrl: url };
+    } catch (_) {
+      return { type: 'unknown', videoId: null, embedUrl: null };
+    }
+  }
+
+  function buildEmbedUrl(mode, videoId, position, isPlaying) {
+    var t = Math.floor(Math.max(0, position || 0));
+    var ap = isPlaying ? 1 : 0;
+    if (mode === 'rumble')  return 'https://rumble.com/embed/' + videoId + '/?pub=&start=' + t + (isPlaying ? '&autoplay=1' : '');
+    if (mode === 'youtube') return 'https://www.youtube.com/embed/' + videoId + '?start=' + t + '&autoplay=' + ap + '&enablejsapi=1&rel=0&modestbranding=1';
+    if (mode === 'vimeo')   return 'https://player.vimeo.com/video/' + videoId + '?autoplay=' + ap + '#t=' + t + 's';
+    return null;
+  }
+
   class WatchPartySync {
     constructor({ videoEl, socket, roomId }) {
       this.video  = videoEl;
       this.socket = socket;
       this.roomId = roomId;
-
       this._isApplyingRemote = false;
       this._isHost           = false;
       this._pendingPlay      = false;
@@ -435,352 +573,350 @@
       this._rateResetTimer   = null;
       this._seekDebounce     = null;
       this._boundGesture     = this._onUserGesture.bind(this);
-
       this._setupVideoListeners();
       this._setupSocketListeners();
       this._setupDriftCorrection();
       this._setupGestureListener();
     }
-
-    /* ── VIDEO → SERVEUR ─────────────────────────────────────────────── */
-
     _setupVideoListeners() {
-      const v = this.video;
-
+      var v = this.video;
       v.addEventListener('play', () => {
-        if (this._isApplyingRemote) return;            // Bug 1
+        if (this._isApplyingRemote) return;
         this.socket.emit('play', { roomId: this.roomId, position: v.currentTime });
       });
-
       v.addEventListener('pause', () => {
-        if (this._isApplyingRemote) return;            // Bug 1
-        if (v.seeking) return;                         // Bug 3 — seek en cours
-        if (v.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) return; // Bug 3 — buffering
-        // Bug 8 : pas de guard isHost — tout le monde peut pauser
+        if (this._isApplyingRemote || v.seeking) return;
+        if (v.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) return;
         this.socket.emit('pause', { roomId: this.roomId, position: v.currentTime });
       });
-
       v.addEventListener('seeked', () => {
-        if (this._isApplyingRemote) return;            // Bug 1 — supprime les seeks distants
+        if (this._isApplyingRemote) return;
         clearTimeout(this._seekDebounce);
         this._seekDebounce = setTimeout(() => {
-          // Bug 8 : pas de guard isHost — tout le monde peut seeker
-          this.socket.emit('seek', {
-            roomId:    this.roomId,
-            position:  v.currentTime,
-            isPlaying: !v.paused,
-          });
+          this.socket.emit('seek', { roomId: this.roomId, position: v.currentTime, isPlaying: !v.paused });
         }, 100);
       });
     }
-
-    /* ── SERVEUR → VIDEO ─────────────────────────────────────────────── */
-
     _setupSocketListeners() {
       this.socket.on('sync', ({ isPlaying, position, sentAt, isHost }) => {
         this._isHost = isHost;
-        const latency = (Date.now() - sentAt) / 1000;           // Bug 2
-        this._apply({ isPlaying, position: isPlaying ? position + latency : position });
+        var lat = (Date.now() - sentAt) / 1000;
+        this._apply({ isPlaying, position: isPlaying ? position + lat : position });
       });
-
-      this.socket.on('play', ({ position, sentAt }) => {
-        const latency = (Date.now() - sentAt) / 1000;           // Bug 2
-        this._apply({ isPlaying: true, position: position + latency });
-      });
-
-      this.socket.on('pause', ({ position }) => {
-        // Pas de compensation sur pause — une position pausée ne dérive pas
-        this._apply({ isPlaying: false, position });
-      });
-
+      this.socket.on('play', ({ position, sentAt }) =>
+        this._apply({ isPlaying: true, position: position + (Date.now() - sentAt) / 1000 }));
+      this.socket.on('pause', ({ position }) =>
+        this._apply({ isPlaying: false, position }));
       this.socket.on('seek', ({ position, isPlaying, sentAt }) => {
-        const latency = isPlaying ? (Date.now() - sentAt) / 1000 : 0;
-        this._apply({ isPlaying, position: position + latency });
+        var lat = isPlaying ? (Date.now() - sentAt) / 1000 : 0;
+        this._apply({ isPlaying, position: position + lat });
       });
-
       this.socket.on('you_are_host', () => { this._isHost = true; });
-
-      // Correction de dérive périodique (Bug 6)
       this.socket.on('sync_tick', ({ isPlaying, position, sentAt }) => {
         if (this._isHost || this._isApplyingRemote) return;
         if (this.video.paused && !isPlaying) return;
-
-        const latency = (Date.now() - sentAt) / 1000;
-        const target  = isPlaying ? position + latency : position;
-        const drift   = this.video.currentTime - target;
-
-        if (Math.abs(drift) < 0.3) return;           // < 300ms : parfait
-
+        var lat    = (Date.now() - sentAt) / 1000;
+        var target = isPlaying ? position + lat : position;
+        var drift  = this.video.currentTime - target;
+        if (Math.abs(drift) < 0.3) return;
         if (Math.abs(drift) < 2.0) {
-          // 300ms–2s : ajuster la vitesse, sans seek (pas de flush buffer)
           clearTimeout(this._rateResetTimer);
           this.video.playbackRate = drift > 0 ? 0.92 : 1.08;
           this._rateResetTimer = setTimeout(() => { this.video.playbackRate = 1.0; }, 3000);
         } else {
-          // > 2s : seek dur acceptable
           this._apply({ isPlaying, position: target });
         }
       });
     }
-
-    /* ── APPLICATION ATOMIQUE AVEC SUPPRESSION ───────────────────────── */
-
     async _apply({ isPlaying, position }) {
-      const v = this.video;
-      this._isApplyingRemote = true;  // 🔒 LOCK
-
+      var v = this.video;
+      this._isApplyingRemote = true;
       try {
-        // Bug 7 — attendre les métadonnées si la vidéo n'est pas encore prête
         if (v.readyState < HTMLMediaElement.HAVE_METADATA) {
-          await new Promise(resolve => {
-            v.addEventListener('loadedmetadata', resolve, { once: true });
-            setTimeout(resolve, 5000);
+          await new Promise(r => {
+            v.addEventListener('loadedmetadata', r, { once: true });
+            setTimeout(r, 5000);
           });
         }
-
-        // Bug 7 — seeker si nécessaire
         if (Math.abs(v.currentTime - position) > 0.5) {
           v.currentTime = position;
-          // Attendre 'seeked' AVANT de toucher play/pause (Bug 7)
-          await new Promise(resolve => {
-            v.addEventListener('seeked', resolve, { once: true });
-            setTimeout(resolve, 800);
+          await new Promise(r => {
+            v.addEventListener('seeked', r, { once: true });
+            setTimeout(r, 800);
           });
         }
-
-        // Bug 7 — seulement maintenant, appliquer play/pause
         if (isPlaying && v.paused) {
-          try {
-            await v.play();                           // Bug 4 — toujours await
-          } catch (err) {
-            if (err.name === 'NotAllowedError') {     // Bug 4 — autoplay bloqué
-              this._pendingPlay = true;
-              this._showOverlay();
-            }
-          }
+          try { await v.play(); }
+          catch (err) { if (err.name === 'NotAllowedError') { this._pendingPlay = true; this._showOverlay(); } }
         } else if (!isPlaying && !v.paused) {
           v.pause();
         }
-
       } catch (err) {
-        console.warn('[Sync] _apply:', err);
+        console.warn('[Sync]', err);
       } finally {
-        // Bug 1 — délai 150ms pour laisser les events du player se vider
         setTimeout(() => { this._isApplyingRemote = false; }, 150);
       }
     }
-
-    /* ── CORRECTION DE DÉRIVE ────────────────────────────────────────── */
-
     _setupDriftCorrection() {
       this._driftTimer = setInterval(() => {
         if (this._isHost || this.video.paused || this._isApplyingRemote) return;
         this.socket.emit('request_sync', { roomId: this.roomId });
       }, 5000);
     }
-
-    /* ── GESTE UTILISATEUR ───────────────────────────────────────────── */
-
     _setupGestureListener() {
-      ['click', 'keydown', 'touchstart'].forEach(e =>
-        document.addEventListener(e, this._boundGesture, { passive: true })
-      );
+      ['click','keydown','touchstart'].forEach(e =>
+        document.addEventListener(e, this._boundGesture, { passive: true }));
     }
-
     _onUserGesture() {
-      // Bug 4 : retry play() si autoplay avait été bloqué
       if (this._pendingPlay) {
-        this._pendingPlay      = false;
+        this._pendingPlay = false;
         this._isApplyingRemote = true;
-        this.video.play()
-          .catch(() => {})
-          .finally(() => setTimeout(() => { this._isApplyingRemote = false; }, 150));
+        this.video.play().catch(() => {}).finally(() =>
+          setTimeout(() => { this._isApplyingRemote = false; }, 150));
       }
-      // Bug 5 : réveiller l'AudioContext si suspendu
-      if (window.__watchPartyAudioCtx?.state === 'suspended') {
+      if (window.__watchPartyAudioCtx && window.__watchPartyAudioCtx.state === 'suspended')
         window.__watchPartyAudioCtx.resume().catch(() => {});
-      }
     }
-
-    _showOverlay() {
-      document.getElementById('play-overlay').style.display = 'flex';
-    }
-
-    /* ── NETTOYAGE ───────────────────────────────────────────────────── */
-
+    _showOverlay() { document.getElementById('play-overlay').style.display = 'flex'; }
     destroy() {
       clearInterval(this._driftTimer);
       clearTimeout(this._rateResetTimer);
       clearTimeout(this._seekDebounce);
-      ['sync', 'play', 'pause', 'seek', 'you_are_host', 'sync_tick']
-        .forEach(e => this.socket.off(e));
-      ['click', 'keydown', 'touchstart']
-        .forEach(e => document.removeEventListener(e, this._boundGesture));
+      ['sync','play','pause','seek','you_are_host','sync_tick'].forEach(e => this.socket.off(e));
+      ['click','keydown','touchstart'].forEach(e =>
+        document.removeEventListener(e, this._boundGesture));
     }
   }
 
-  /* ══════════════════════════════════════════════════════════════════════
-     APP WIRING
-  ══════════════════════════════════════════════════════════════════════ */
+  class IframeSyncManager {
+    constructor({ socket, roomId, videoId, mode, duration }) {
+      this.socket      = socket;
+      this.roomId      = roomId;
+      this.videoId     = videoId;
+      this.mode        = mode;
+      this._duration   = duration || 0;
+      this._isPlaying  = false;
+      this._position   = 0;
+      this._startedAt  = 0;
+      this._clockTimer = null;
+      this._setupSocket();
+      this._startClock();
+    }
+    getCurrentPosition() {
+      if (!this._isPlaying) return this._position;
+      return this._position + (Date.now() - this._startedAt) / 1000;
+    }
+    play()  { this.socket.emit('play',  { roomId: this.roomId, position: this.getCurrentPosition() }); }
+    pause() { this.socket.emit('pause', { roomId: this.roomId, position: this.getCurrentPosition() }); }
+    seek(p) { this.socket.emit('seek',  { roomId: this.roomId, position: Math.max(0, p), isPlaying: this._isPlaying }); }
+    seekRelative(d) { this.seek(this.getCurrentPosition() + d); }
+    _apply({ isPlaying, position, sentAt }) {
+      var lat = (Date.now() - (sentAt || Date.now())) / 1000;
+      var target = isPlaying ? position + lat : position;
+      this._isPlaying = isPlaying;
+      this._position  = target;
+      this._startedAt = Date.now();
+      this._reloadIframe(target, isPlaying);
+      this._updateUI();
+    }
+    _reloadIframe(position, isPlaying) {
+      var iframe = document.getElementById('video-iframe');
+      if (!iframe) return;
+      var url = buildEmbedUrl(this.mode, this.videoId, position, isPlaying);
+      if (url && iframe.src !== url) iframe.src = url;
+      var pb = document.getElementById('iframe-play-btn');
+      var pp = document.getElementById('iframe-pause-btn');
+      if (pb) pb.style.display = isPlaying ? 'none' : '';
+      if (pp) pp.style.display = isPlaying ? '' : 'none';
+    }
+    _setupSocket() {
+      this.socket.on('sync',  (d) => this._apply(d));
+      this.socket.on('play',  (d) => this._apply({ isPlaying: true,  position: d.position, sentAt: d.sentAt }));
+      this.socket.on('pause', (d) => this._apply({ isPlaying: false, position: d.position, sentAt: d.sentAt || Date.now() }));
+      this.socket.on('seek',  (d) => this._apply(d));
+      this.socket.on('video_set', (d) => {
+        this.mode = d.mode; this.videoId = d.videoId;
+        this._isPlaying = false; this._position = 0;
+        this._reloadIframe(0, false);
+      });
+    }
+    _startClock() { this._clockTimer = setInterval(() => this._updateUI(), 500); }
+    _updateUI() {
+      var pos  = this.getCurrentPosition();
+      var pct  = this._duration > 0 ? Math.min(100, (pos / this._duration) * 100) : 0;
+      var fill = document.getElementById('progress-fill');
+      var time = document.getElementById('iframe-time');
+      if (fill) fill.style.width = pct + '%';
+      if (time) time.textContent = formatTime(pos) + ' / ' + (this._duration > 0 ? formatTime(this._duration) : '--:--');
+    }
+    destroy() {
+      clearInterval(this._clockTimer);
+      ['sync','play','pause','seek','video_set'].forEach(e => this.socket.off(e));
+    }
+  }
 
-  let sync   = null;
-  let socket = null;
+  function formatTime(sec) {
+    sec = Math.floor(sec || 0);
+    var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    return h > 0
+      ? h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0')
+      : m + ':' + String(s).padStart(2,'0');
+  }
 
-  // Enter depuis n'importe quel champ du formulaire lance joinParty()
-  ['input-name', 'input-room', 'input-url'].forEach(id =>
-    document.getElementById(id).addEventListener('keydown', e => {
-      if (e.key === 'Enter') joinParty();
-    })
-  );
+  function setStatusLoading() {
+    var el = document.getElementById('video-status');
+    el.innerHTML = '<div class="vstatus-spinner"></div><div class="vstatus-title">Chargement…</div>';
+    el.classList.add('visible');
+  }
+  function setStatus(icon, title, sub, pills) {
+    var el = document.getElementById('video-status');
+    el.innerHTML = '<div class="vstatus-icon">' + icon + '</div>' +
+      '<div class="vstatus-title">' + title + '</div>' +
+      (sub ? '<div class="vstatus-sub">' + sub + '</div>' : '') +
+      (pills && pills.length ? '<div class="vstatus-pills">' + pills.map(function(p){ return '<span class="vstatus-pill">' + p + '</span>'; }).join('') + '</div>' : '');
+    el.classList.add('visible');
+  }
+  function hideStatus() { document.getElementById('video-status').classList.remove('visible'); }
+
+  function addMessage(type, name, msg, time) {
+    var box = document.getElementById('chat-messages');
+    var wasAtBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+    var el = document.createElement('div');
+    el.className = type === 'system' ? 'msg-system' : 'msg-chat';
+    if (type === 'system') {
+      el.textContent = msg;
+    } else {
+      el.innerHTML = '<span class="msg-time">' + esc(time) + '</span>' +
+        '<span class="msg-name">' + esc(name) + '</span>' +
+        '<span class="msg-text">' + esc(msg)  + '</span>';
+    }
+    box.appendChild(el);
+    if (wasAtBottom) box.scrollTop = box.scrollHeight;
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  var syncMgr = null, iframeMgr = null;
+
+  function iframePlay()  { if (iframeMgr) iframeMgr.play(); }
+  function iframePause() { if (iframeMgr) iframeMgr.pause(); }
+  function iframeSeek(d) { if (iframeMgr) iframeMgr.seekRelative(d); }
+
+  function handleProgressClick(event) {
+    if (!iframeMgr) return;
+    var track = document.getElementById('progress-track');
+    var rect  = track.getBoundingClientRect();
+    var ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    iframeMgr.seek(ratio * (iframeMgr._duration > 0 ? iframeMgr._duration : 7200));
+  }
+
+  ['input-name','input-room','input-url','input-duration'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('keydown', function(e) { if (e.key === 'Enter') joinParty(); });
+  });
 
   function joinParty() {
-    const name   = (document.getElementById('input-name').value.trim() || 'Viewer').slice(0, 30);
-    const roomId =  document.getElementById('input-room').value.trim() || 'room-1';
-    const url    =  document.getElementById('input-url').value.trim();
+    var name        = (document.getElementById('input-name').value.trim() || 'Viewer').slice(0,30);
+    var roomId      =  document.getElementById('input-room').value.trim() || 'room-1';
+    var rawUrl      =  document.getElementById('input-url').value.trim();
+    var durationSec = (parseFloat(document.getElementById('input-duration').value) || 0) * 60;
 
-    if (!url) { alert('Entre une URL de vidéo.'); return; }
+    if (!rawUrl) { alert('Entre une URL de vidéo.'); return; }
 
-    // Charger la vidéo
-    const video  = document.getElementById('video');
-    const status = document.getElementById('video-status');
-
-    function setStatus(icon, title, sub, pills = []) {
-      status.innerHTML =
-        `<div class="vstatus-icon">${icon}</div>` +
-        `<div class="vstatus-title">${title}</div>` +
-        (sub ? `<div class="vstatus-sub">${sub}</div>` : '') +
-        (pills.length
-          ? `<div class="vstatus-pills">${pills.map(p => `<span class="vstatus-pill">${p}</span>`).join('')}</div>`
-          : '');
-      status.classList.add('visible');
+    var detected = detectUrlType(rawUrl);
+    if (detected.type === 'unknown' || !detected.embedUrl) {
+      alert('URL non reconnue. Colle une URL Rumble, YouTube, Vimeo, ou un lien .mp4/.m3u8 direct.');
+      return;
     }
 
-    function setStatusLoading() {
-      status.innerHTML =
-        '<div class="vstatus-spinner"></div>' +
-        '<div class="vstatus-title">Chargement…</div>';
-      status.classList.add('visible');
-    }
-
-    function hideStatus() { status.classList.remove('visible'); }
-
-    // Feedback état vidéo
-    video.addEventListener('loadstart', setStatusLoading);
-
-    video.addEventListener('canplay', hideStatus);
-
-    video.addEventListener('error', () => {
-      const code = video.error?.code;
-      if (code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
-        setStatus('🚫', 'Format non supporté',
-          'Ce lien ne peut pas être lu directement par le navigateur.<br>' +
-          'YouTube, Vimeo, Twitch… ne sont <strong>pas supportés</strong>.<br>' +
-          'Utilise un lien vidéo direct :',
-          ['.mp4', '.webm', '.ogg', '.m3u8']);
-      } else if (code === MediaError.MEDIA_ERR_NETWORK) {
-        setStatus('📡', 'Erreur réseau',
-          'Impossible d\'accéder à la vidéo. Vérifie que le lien est public et accessible.');
-      } else {
-        setStatus('⚠️', 'Impossible de charger la vidéo',
-          'Vérifie que le lien est un fichier vidéo direct (pas YouTube, pas Vimeo).<br>' +
-          'Exemple : <code style="color:var(--accent)">https://example.com/video.mp4</code>');
-      }
-    });
-
-    // Afficher l'écran player
     document.getElementById('join-screen').style.display   = 'none';
     document.getElementById('player-screen').style.display = 'flex';
     document.getElementById('room-badge').textContent       = '🎬 ' + roomId;
 
-    // Lancer le chargement
-    video.src = url;
+    var socket = io();
 
-    // Socket + sync manager
-    socket = io();
-    sync   = new WatchPartySync({ videoEl: video, socket, roomId });
+    if (detected.type === 'direct') {
+      document.getElementById('video-direct').style.display   = 'block';
+      document.getElementById('iframe-wrapper').style.display = 'none';
+      var video = document.getElementById('video-direct');
+      setStatusLoading();
+      video.addEventListener('loadstart', setStatusLoading);
+      video.addEventListener('canplay',   hideStatus);
+      video.addEventListener('error', function() {
+        var code = video.error && video.error.code;
+        if (code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+          setStatus('🚫','Format non supporté','Ce lien ne peut pas être lu directement. Colle une URL Rumble, YouTube ou un .mp4 direct.',['.mp4','.webm','.m3u8']);
+        } else if (code === MediaError.MEDIA_ERR_NETWORK) {
+          setStatus('📡','Erreur réseau','Vérifie que le lien est public.');
+        } else {
+          setStatus('⚠️','Impossible de charger','Vérifie le lien ou essaie un autre format.');
+        }
+      });
+      video.src = detected.embedUrl;
+      syncMgr = new WatchPartySync({ videoEl: video, socket: socket, roomId: roomId });
+      document.getElementById('overlay-btn').addEventListener('click', function() {
+        document.getElementById('play-overlay').style.display = 'none';
+        if (syncMgr) syncMgr._onUserGesture();
+        video.play().catch(function(){});
+      });
+    } else {
+      document.getElementById('video-direct').style.display   = 'none';
+      document.getElementById('iframe-wrapper').style.display = 'block';
+      setStatusLoading();
+      var iframe = document.getElementById('video-iframe');
+      iframe.src = buildEmbedUrl(detected.type, detected.videoId, 0, false);
+      iframe.addEventListener('load', hideStatus, { once: true });
+      setTimeout(hideStatus, 4000);
+      iframeMgr = new IframeSyncManager({
+        socket: socket, roomId: roomId,
+        videoId: detected.videoId, mode: detected.type, duration: durationSec,
+      });
+    }
 
-    // Rejoindre au connect (initial + après reconnexion)
-    let connected = false;
-    socket.on('connect', () => {
-      socket.emit('join', { roomId });
+    var connected = false;
+    socket.on('connect', function() {
+      socket.emit('join', { roomId: roomId });
+      if (!connected && detected.type !== 'direct') {
+        socket.emit('set_video', { roomId: roomId, url: rawUrl,
+          mode: detected.type, videoId: detected.videoId, embedUrl: detected.embedUrl });
+      }
       if (connected) {
         document.getElementById('reconnect-badge').style.display = 'none';
-        addMessage({ type: 'system', msg: '✅ Reconnecté.' });
+        addMessage('system','','✅ Reconnecté.','');
       }
       connected = true;
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', function() {
       document.getElementById('reconnect-badge').style.display = 'inline-flex';
-      addMessage({ type: 'system', msg: 'Connexion perdue, reconnexion…' });
+      addMessage('system','','Connexion perdue, reconnexion…','');
     });
 
-    // Badge host — déclenché par you_are_host ET par le champ isHost du sync initial
-    socket.on('you_are_host', () => {
-      sync._isHost = true;
+    socket.on('you_are_host', function() {
+      if (syncMgr) syncMgr._isHost = true;
       document.getElementById('host-badge').style.display = 'inline-flex';
     });
-    socket.on('sync', ({ isHost }) => {
-      document.getElementById('host-badge').style.display = isHost ? 'inline-flex' : 'none';
+    socket.on('sync', function(data) {
+      document.getElementById('host-badge').style.display = data.isHost ? 'inline-flex' : 'none';
     });
-
-    // Nombre de spectateurs
-    socket.on('viewer_count', ({ count }) => {
-      document.getElementById('viewer-count').textContent = '👥 ' + count;
+    socket.on('viewer_count', function(data) {
+      document.getElementById('viewer-count').textContent = '👥 ' + data.count;
     });
+    socket.on('system_msg', function(data) { addMessage('system','',data.msg,''); });
+    socket.on('chat', function(data) { addMessage('chat',data.name,data.msg,data.time); });
 
-    // Messages système (promotion host…)
-    socket.on('system_msg', ({ msg }) => addMessage({ type: 'system', msg }));
-
-    // Chat entrant
-    socket.on('chat', ({ name, msg, time }) => addMessage({ type: 'chat', name, msg, time }));
-
-    // Overlay : clic → cacher + retry play
-    document.getElementById('overlay-btn').addEventListener('click', () => {
-      document.getElementById('play-overlay').style.display = 'none';
-      sync._onUserGesture();
-      video.play().catch(() => {});
-    });
-
-    // Chat sortant
-    const sendChat = () => {
-      const input = document.getElementById('chat-input');
-      const msg   = input.value.trim();
-      if (!msg) return;
-      socket.emit('chat', { roomId, name, msg });
+    var sendChat = function() {
+      var input = document.getElementById('chat-input');
+      var msg = input.value.trim(); if (!msg) return;
+      socket.emit('chat', { roomId: roomId, name: name, msg: msg });
       input.value = '';
     };
     document.getElementById('chat-send').addEventListener('click', sendChat);
-    document.getElementById('chat-input').addEventListener('keydown', e => {
+    document.getElementById('chat-input').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') sendChat();
     });
-  }
-
-  /* ── Helpers chat ────────────────────────────────────────────────── */
-
-  function addMessage({ type, name, msg, time }) {
-    const box          = document.getElementById('chat-messages');
-    const wasAtBottom  = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
-    const el           = document.createElement('div');
-    el.className       = type === 'system' ? 'msg-system' : 'msg-chat';
-
-    if (type === 'system') {
-      el.textContent = msg;
-    } else {
-      el.innerHTML =
-        `<span class="msg-time">${esc(time)}</span>` +
-        `<span class="msg-name">${esc(name)}</span>` +
-        `<span class="msg-text">${esc(msg)}</span>`;
-    }
-
-    box.appendChild(el);
-    if (wasAtBottom) box.scrollTop = box.scrollHeight; // auto-scroll intelligent
-  }
-
-  function esc(s) {
-    return String(s)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
   </script>
 </body>

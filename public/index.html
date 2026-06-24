@@ -801,9 +801,21 @@
       if (!this._isPlaying) return this._position;
       return this._position + (Date.now() - this._startedAt) / 1000;
     }
-    play()  { this.socket.emit('play',  { roomId: this.roomId, position: this.getCurrentPosition() }); }
-    pause() { this.socket.emit('pause', { roomId: this.roomId, position: this.getCurrentPosition() }); }
-    seek(p) { this.socket.emit('seek',  { roomId: this.roomId, position: Math.max(0, p), isPlaying: this._isPlaying }); }
+    play() {
+      var pos = this.getCurrentPosition();
+      this.socket.emit('play', { roomId: this.roomId, position: pos });
+      this._apply({ isPlaying: true,  position: pos, sentAt: Date.now() });
+    }
+    pause() {
+      var pos = this.getCurrentPosition();
+      this.socket.emit('pause', { roomId: this.roomId, position: pos });
+      this._apply({ isPlaying: false, position: pos, sentAt: Date.now() });
+    }
+    seek(p) {
+      var pos = Math.max(0, p);
+      this.socket.emit('seek', { roomId: this.roomId, position: pos, isPlaying: this._isPlaying });
+      this._apply({ isPlaying: this._isPlaying, position: pos, sentAt: Date.now() });
+    }
     seekRelative(d) { this.seek(this.getCurrentPosition() + d); }
     _apply({ isPlaying, position, sentAt }) {
       var lat    = (Date.now() - (sentAt || Date.now())) / 1000;

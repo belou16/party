@@ -682,3 +682,129 @@ ul { list-style: none; }
   .ctrl-volume-group { display: none; }
   .ctrl-time { min-width: 70px; font-size: 0.72rem; }
 }
+
+
+/* ============================================================
+   LANDING PAGE LAYOUT UPDATE — hero + logos band
+   ============================================================ */
+
+/* Outer page shell: column flex so logos band sits below hero */
+.landing-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(124,58,237,0.18) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(79,70,229,0.14) 0%, transparent 60%),
+    var(--bg);
+}
+
+/* Centered hero area (form + header) */
+.landing-hero {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3.5rem 1.5rem 2.5rem;
+  width: 100%;
+}
+
+/* Logo icon in header */
+.logo-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+  margin-bottom: 1px;
+}
+
+/* Remove emoji sizing rule — logo-icon replaces it */
+.logo-emoji { display: none; }
+
+/* Footer now sits outside the container */
+.landing-footer {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  padding: 1.25rem 2rem 2rem;
+}
+
+/* ============================================================
+   CUSTOMER LOGOS SECTION
+   ============================================================ */
+.logos-section {
+  width: 100%;
+  padding: 72px 48px;
+  border-top: 1px solid rgba(255, 255, 255, 0.065);
+}
+
+.logos-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+}
+
+/* Kicker — small, spaced, uppercase, barely-there */
+.logos-kicker {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.27);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* Single flex row of marks; wraps on narrow viewports */
+.logos-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  column-gap: 56px;
+  row-gap: 32px;
+}
+
+.logo-item {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.logo-item svg {
+  display: block;
+  height: 22px;
+  width: auto;
+  overflow: visible;
+  color: rgba(255, 255, 255, 0.22);
+  transition: color 0.22s ease;
+}
+
+.logo-item:hover svg {
+  color: rgba(255, 255, 255, 0.48);
+}
+
+/* Narrow viewports: tighten padding, reduce gaps */
+@media (max-width: 600px) {
+  .logos-section {
+    padding: 56px 32px;
+  }
+  .logos-inner {
+    gap: 32px;
+  }
+  .logos-row {
+    column-gap: 36px;
+    row-gap: 28px;
+  }
+  .logo-item svg {
+    height: 19px;
+  }
+}
+
+@media (max-width: 380px) {
+  .logos-row {
+    column-gap: 28px;
+  }
+}

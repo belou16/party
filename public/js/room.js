@@ -366,7 +366,7 @@
       if (!data || data.type !== 'DORO_EVENT') return;
 
       if (data.event === 'ready') {
-        iframeWarning.textContent = 'Sync active — video detected on the page.';
+        iframeWarning.hidden = true;
         return;
       }
 
@@ -378,8 +378,8 @@
 
     window.addEventListener('message', handleMessage);
 
-    iframeWarning.textContent = 'Loading via proxy… Sync activates once a video is detected on the page.';
-    iframeWarning.hidden = false;
+    // proxy iframe loaded — warning hidden until video detected
+    iframeWarning.hidden = true;
 
     return Promise.resolve({
       play(t)          { postCmd('play',  t); },

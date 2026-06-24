@@ -41,6 +41,42 @@ app.get('/room/:roomId', (_req, res) =>
   res.sendFile(path.join(__dirname, 'public', 'room.html'))
 );
 
+﻿// ── Rumble embed resolver ─────────────────────────────────────────────────
+// Calls Rumble's oEmbed API to get the correct embed URL from a page URL.
+// Rumble page IDs (v4wv296) differ from embed IDs (v4ue2sl); oEmbed bridges them.
+app.get('/api/rumble-embed', (req, res) => {
+  const rawUrl = req.query.url;
+  if (!rawUrl) return res.status(400).json({ error: 'Missing url' });
+
+  const oembedUrl =
+    'https://rumble.com/api/Media/oembed.json?url=' + encodeURIComponent(rawUrl);
+
+  const req2 = https.request(oembedUrl, {
+    method: 'GET',
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; DoroParty/1.0)',
+      'Accept':     'application/json',
+    },
+    timeout: 8000,
+  }, (r) => {
+    let body = '';
+    r.on('data', d => { body += d; });
+    r.on('end', () => {
+      try {
+        const json = JSON.parse(body);
+        const m = json.html && json.html.match(/\/embed\/(v[a-z0-9]+)/i);
+        if (m) return res.json({ embedUrl: 'https://rumble.com/embed/' + m[1] + '/' });
+        res.status(404).json({ error: 'Embed URL not found in oEmbed response' });
+      } catch (_) {
+        res.status(502).json({ error: 'Invalid oEmbed response' });
+      }
+    });
+  });
+  req2.on('error', e => res.status(502).json({ error: e.message }));
+  req2.on('timeout', () => { req2.destroy(); res.status(504).json({ error: 'Timeout' }); });
+  req2.end();
+});
+
 // ── Proxy endpoint ────────────────────────────────────────────────────────
 app.get('/proxy', (req, res) => {
   const rawUrl = req.query.url;

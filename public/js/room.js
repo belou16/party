@@ -429,9 +429,13 @@
         break;
       }
       case 'rumble': {
-        // Proxy the embed URL directly so our sync script runs inside the player
-        const vid = extractRumbleId(url);
-        const embedUrl = vid ? 'https://rumble.com/embed/' + vid + '/' : url;
+        // Use Rumble's oEmbed API to get the correct embed ID (page ID != embed ID)
+        let embedUrl = url;
+        try {
+          const resp = await fetch('/api/rumble-embed?url=' + encodeURIComponent(url));
+          const data = await resp.json();
+          if (data.embedUrl) embedUrl = data.embedUrl;
+        } catch (_) {}
         player = await createIframePlayer(embedUrl);
         break;
       }

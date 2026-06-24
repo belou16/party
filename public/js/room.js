@@ -1,4 +1,4 @@
-﻿/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    Doro Party â€” Room logic (room.js)
    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
@@ -110,6 +110,7 @@
   let syncedUntil = 0; // absolute timestamp — events suppressed while Date.now() < syncedUntil
   let mySocketId = null;
   let isHost = false;
+  let _heartbeatTimer = null;
 
   /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      6. Player adapter
@@ -136,7 +137,7 @@
           },
           events: {
             onReady(event) {
-              resolve(buildYTAdapter(event.target));
+              resolve(buildYTAdapter(event.target, startTime));
             }
           }
         });
@@ -161,29 +162,27 @@
     if (window._doroYTReady) window._doroYTReady();
   };
 
-  function buildYTAdapter(ytPlayer) {
+  function buildYTAdapter(ytPlayer, initialTime) {
     let playCallbacks  = [];
     let pauseCallbacks = [];
     let seekCallbacks  = [];
-    let justLocalSeeked  = false;
     let lastState      = -1;
-    let lastTime       = 0;
+    // Initialise to startTime so the first onStateChange never looks like a seek.
+    let lastTime       = initialTime || 0;
 
     ytPlayer.addEventListener('onStateChange', (e) => {
       const state = e.data;
       const t     = ytPlayer.getCurrentTime();
+      // While applying a remote command, suppress all outbound events.
       if (Date.now() < syncedUntil) { lastTime = t; lastState = state; return; }
 
-      if (Math.abs(t - lastTime) > 1.5 && state !== YT.PlayerState.ENDED) {
-        seekCallbacks.forEach(cb => cb(t));
-        justLocalSeeked = true;
-      }
+      // Use state *transitions* only — not time-jumps.
+      // play(t) already carries currentTime, so an explicit seek event is
+      // unnecessary and causes false "seeks" when YouTube rebuffers naturally.
       if (state === YT.PlayerState.PLAYING && lastState !== YT.PlayerState.PLAYING) {
-        if (!justLocalSeeked) playCallbacks.forEach(cb => cb(t));
-        justLocalSeeked = false;
+        playCallbacks.forEach(cb => cb(t));
       } else if (state === YT.PlayerState.PAUSED && lastState !== YT.PlayerState.PAUSED) {
         pauseCallbacks.forEach(cb => cb(t));
-        justLocalSeeked = false;
       }
       lastTime  = t;
       lastState = state;
@@ -401,7 +400,7 @@
      7. Initialise / re-initialise the player
   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   async function initPlayer(url, startTime, autoplay) {
-    syncedUntil = Date.now() + 2000; // 2s grace for player init events
+    syncedUntil = Date.now() + 5000; // 5s grace: YouTube can take 3-4s to load
     // Tear down previous player state
     customControls.hidden = true;
     iframeWarning.hidden  = true;
@@ -452,7 +451,9 @@
         break;
     }
 
+    stopHeartbeat();
     attachPlayerListeners();
+    startHeartbeat();
   }
 
   /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -558,6 +559,35 @@
   });
 
   // â”€â”€ chat-message â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+  // ── Heartbeat (Teleparty-style drift correction) ────────────────────────────
+  // Host broadcasts current position every 10 s while playing.
+  // Others seek to correct if they drift more than 2.5 s.
+  function startHeartbeat() {
+    stopHeartbeat();
+    if (!isHost) return;
+    _heartbeatTimer = setInterval(() => {
+      if (!player) return;
+      const t = player.getCurrentTime();
+      if (typeof t === 'number' && t > 0) {
+        socket.emit('heartbeat', { roomId, currentTime: t, sentAt: Date.now() });
+      }
+    }, 10000);
+  }
+  function stopHeartbeat() {
+    clearInterval(_heartbeatTimer);
+    _heartbeatTimer = null;
+  }
+
+  socket.on('sync-heartbeat', ({ currentTime, sentAt }) => {
+    if (!player || isHost) return;
+    const expected = currentTime + (Date.now() - sentAt) / 1000;
+    const actual   = player.getCurrentTime();
+    if (typeof actual === 'number' && actual > 0 && Math.abs(actual - expected) > 2.5) {
+      _scheduleSyncCmd('seek', expected, 3000);
+    }
+  });
+
   socket.on('chat-message', ({ username: sender, message }) => {
     appendChatMessage(sender, message, sender === username ? 'self' : 'other');
   });

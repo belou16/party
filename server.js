@@ -1,4 +1,4 @@
-﻿const express  = require('express');
+const express  = require('express');
 const http     = require('http');
 const https    = require('https');
 const zlib     = require('zlib');
@@ -265,6 +265,12 @@ io.on('connection', socket => {
     room.currentTime = currentTime;
     if (room.isPlaying) room.playedAt = Date.now();
     socket.to(roomId).emit('sync-seek', { currentTime });
+  });
+
+  socket.on('heartbeat', ({ roomId, currentTime, sentAt }) => {
+    const room = rooms.get(roomId);
+    if (!room || room.hostId !== socket.id) return;
+    socket.to(roomId).emit('sync-heartbeat', { currentTime, sentAt });
   });
 
   socket.on('chat-message', ({ roomId, username, message }) => {

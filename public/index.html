@@ -641,8 +641,12 @@
   function buildEmbedUrl(mode, videoId, position, isPlaying) {
     var t  = Math.floor(Math.max(0, position || 0));
     var ap = isPlaying ? 1 : 0;
-    if (mode === 'rumble')
-      return 'https://rumble.com/embed/' + videoId + '/?pub=&start=' + t + (isPlaying ? '&autoplay=1' : '');
+    if (mode === 'rumble') {
+      var rp = [];
+      if (t > 0)   rp.push('start=' + t);
+      if (isPlaying) rp.push('autoplay=1');
+      return 'https://rumble.com/embed/' + videoId + '/' + (rp.length ? '?' + rp.join('&') : '');
+    }
     if (mode === 'youtube')
       return 'https://www.youtube.com/embed/' + videoId +
              '?start=' + t + '&autoplay=' + ap + '&enablejsapi=1&rel=0&modestbranding=1';
@@ -1008,73 +1012,92 @@
 
   /* ══════════════════════════════════════════════════════════════
      RUMBLE MANAGER — reload iframe (pas d'API publique)
+     Le rechargement est la seule façon de changer la position/état.
+     Un cooldown de 1.5 s évite les rechargements en rafale.
   ══════════════════════════════════════════════════════════════ */
   class RumbleManager {
     constructor({ socket, roomId, videoId, initialState }) {
-      this.socket     = socket;
-      this.roomId     = roomId;
-      this.videoId    = videoId;
-      this._isPlaying = false;
-      this._position  = 0;
-      this._startedAt = Date.now();
+      this.socket      = socket;
+      this.roomId      = roomId;
+      this.videoId     = videoId;
+      this._isPlaying  = false;
+      this._position   = 0;
+      this._startedAt  = Date.now();
+      this._loadTimer  = null;   // cooldown pour éviter double-reload
 
       this._setupSocket();
-      if (initialState) this._apply(initialState);
+      this._load(initialState || { isPlaying: false, position: 0, sentAt: Date.now() });
     }
 
+    /* position estimée via horloge logicielle */
     getCurrentPosition() {
       if (!this._isPlaying) return this._position;
       return this._position + (Date.now() - this._startedAt) / 1000;
     }
 
-    play() {
-      var pos = this.getCurrentPosition();
-      this.socket.emit('play', { roomId: this.roomId, position: pos });
-      this._apply({ isPlaying: true, position: pos, sentAt: Date.now() });
-    }
-    pause() {
-      var pos = this.getCurrentPosition();
-      this.socket.emit('pause', { roomId: this.roomId, position: pos });
-      this._apply({ isPlaying: false, position: pos, sentAt: Date.now() });
-    }
-    seek(p) {
-      var pos = Math.max(0, p);
-      this.socket.emit('seek', { roomId: this.roomId, position: pos, isPlaying: this._isPlaying });
-      this._apply({ isPlaying: this._isPlaying, position: pos, sentAt: Date.now() });
-    }
-    seekRelative(d) { this.seek(this.getCurrentPosition() + d); }
-
-    _apply({ isPlaying, position, sentAt }) {
-      var lat    = (Date.now() - (sentAt || Date.now())) / 1000;
+    /* recharge l'iframe à la bonne position, avec cooldown 1.5 s */
+    _load({ isPlaying, position, sentAt }) {
+      var lat    = sentAt ? (Date.now() - sentAt) / 1000 : 0;
       var target = isPlaying ? position + lat : position;
       this._isPlaying = isPlaying;
       this._position  = target;
       this._startedAt = Date.now();
+
+      // anti-rafale : ignore si un rechargement vient de se produire
+      if (this._loadTimer) return;
+      this._loadTimer = setTimeout(() => { this._loadTimer = null; }, 1500);
+
       var iframe = document.getElementById('video-iframe');
-      if (iframe) {
-        var url = buildEmbedUrl('rumble', this.videoId, target, isPlaying);
-        if (url && iframe.src !== url) iframe.src = url;
-      }
+      if (!iframe) return;
+      var url = buildEmbedUrl('rumble', this.videoId, target, isPlaying);
+      iframe.src = url;
+
+      // indicateur de chargement
+      setStatusLoading('Synchronisation Rumble…');
+      var onLoad = function() { hideStatus(); iframe.removeEventListener('load', onLoad); };
+      iframe.addEventListener('load', onLoad);
+      setTimeout(hideStatus, 8000);
+
+      // boutons overlay
       var pb = document.getElementById('iframe-play-btn');
       var pp = document.getElementById('iframe-pause-btn');
       if (pb) pb.style.display = isPlaying ? 'none' : '';
-      if (pp) pp.style.display = isPlaying ? '' : 'none';
+      if (pp) pp.style.display = isPlaying ? ''     : 'none';
     }
 
+    play() {
+      var pos = this.getCurrentPosition();
+      this.socket.emit('play', { roomId: this.roomId, position: pos });
+      this._load({ isPlaying: true,  position: pos, sentAt: Date.now() });
+    }
+    pause() {
+      var pos = this.getCurrentPosition();
+      this.socket.emit('pause', { roomId: this.roomId, position: pos });
+      this._load({ isPlaying: false, position: pos, sentAt: Date.now() });
+    }
+    seek(p) {
+      var pos = Math.max(0, p);
+      this.socket.emit('seek', { roomId: this.roomId, position: pos, isPlaying: this._isPlaying });
+      this._load({ isPlaying: this._isPlaying, position: pos, sentAt: Date.now() });
+    }
+    seekRelative(d) { this.seek(this.getCurrentPosition() + d); }
+
     _setupSocket() {
-      this.socket.on('play',  (d) => this._apply({ isPlaying: true,  position: d.position, sentAt: d.sentAt }));
-      this.socket.on('pause', (d) => this._apply({ isPlaying: false, position: d.position, sentAt: d.sentAt }));
-      this.socket.on('seek',  (d) => this._apply({ isPlaying: d.isPlaying, position: d.position, sentAt: d.sentAt }));
-      this.socket.on('sync',  (d) => this._apply({ isPlaying: d.isPlaying, position: d.position, sentAt: d.sentAt }));
-      this.socket.on('video_set', (d) => {
-        this.videoId = d.videoId;
-        this._isPlaying = false; this._position = 0;
-        this._apply({ isPlaying: false, position: 0, sentAt: Date.now() });
+      this.socket.on('play',  (d) => this._load({ isPlaying: true,  position: d.position, sentAt: d.sentAt }));
+      this.socket.on('pause', (d) => this._load({ isPlaying: false, position: d.position, sentAt: d.sentAt }));
+      this.socket.on('seek',  (d) => this._load({ isPlaying: d.isPlaying, position: d.position, sentAt: d.sentAt }));
+      this.socket.on('sync',  (d) => {
+        // resync seulement si la position diffère significativement
+        var drift = Math.abs(this.getCurrentPosition() - (d.position || 0));
+        if (drift > 5 || d.isPlaying !== this._isPlaying) {
+          this._load({ isPlaying: d.isPlaying, position: d.position, sentAt: d.sentAt });
+        }
       });
     }
 
     destroy() {
-      ['play','pause','seek','sync','video_set'].forEach(e => this.socket.off(e));
+      clearTimeout(this._loadTimer);
+      ['play','pause','seek','sync'].forEach(e => this.socket.off(e));
     }
   }
 

@@ -31,7 +31,7 @@
       overflow: hidden;
     }
 
-    /* JOIN SCREEN */
+    /* ── JOIN SCREEN ─────────────────────────────────────────────── */
     #join-screen {
       display: flex;
       align-items: center;
@@ -85,6 +85,19 @@
     }
     .url-hint .ok { color: var(--success); }
 
+    /* Séparateur visuel mode guest */
+    .guest-notice {
+      background: rgba(108,99,255,0.10);
+      border: 1px solid rgba(108,99,255,0.25);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+    .guest-notice strong { color: var(--accent); }
+
     .btn-join {
       width: 100%;
       background: var(--accent);
@@ -100,8 +113,9 @@
     }
     .btn-join:hover  { background: var(--accent-hover); }
     .btn-join:active { transform: scale(0.98); }
+    .btn-join:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* PLAYER SCREEN */
+    /* ── PLAYER SCREEN ───────────────────────────────────────────── */
     #player-screen {
       display: none;
       flex-direction: column;
@@ -117,9 +131,11 @@
       align-items: center;
       justify-content: space-between;
       padding: 0 16px;
+      gap: 8px;
     }
 
-    .topbar-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .topbar-left  { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+    .topbar-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 
     .badge {
       font-size: 12px;
@@ -151,10 +167,7 @@
 
     #viewer-count { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
 
-    .topbar-right { display: flex; align-items: center; gap: 10px; }
-
     #share-btn {
-      display: none;
       background: var(--surface-2);
       border: 1px solid var(--border);
       color: var(--text);
@@ -166,7 +179,7 @@
       transition: background 0.15s, border-color 0.15s;
       white-space: nowrap;
     }
-    #share-btn:hover { background: var(--surface); border-color: var(--accent); }
+    #share-btn:hover  { background: var(--surface); border-color: var(--accent); }
     #share-btn.copied { border-color: var(--success); color: var(--success); }
 
     #main-area {
@@ -176,7 +189,7 @@
       min-height: 0;
     }
 
-    /* VIDEO CONTAINER */
+    /* ── VIDEO CONTAINER ─────────────────────────────────────────── */
     #video-container {
       flex: 1;
       background: #000;
@@ -207,11 +220,12 @@
       display: block;
     }
 
+    /* Overlay contrôles iframe — en HAUT pour ne pas gêner les contrôles natifs en bas */
     #iframe-overlay {
       position: absolute;
       top: 0; left: 0; right: 0;
-      background: linear-gradient(rgba(0,0,0,0.82) 0%, transparent 100%);
-      padding: 14px 16px 44px;
+      background: linear-gradient(rgba(0,0,0,0.80) 0%, transparent 100%);
+      padding: 12px 16px 48px;
       opacity: 0;
       transition: opacity 0.22s;
       pointer-events: none;
@@ -222,14 +236,41 @@
       pointer-events: auto;
     }
 
+    #iframe-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sync-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.50);
+      text-transform: uppercase;
+      margin-right: 4px;
+    }
+
+    #iframe-controls button {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: #fff;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    #iframe-controls button:hover { background: rgba(255,255,255,0.22); }
+
     #progress-track {
       width: 100%;
       height: 4px;
-      background: rgba(255,255,255,0.22);
+      background: rgba(255,255,255,0.18);
       border-radius: 2px;
       cursor: pointer;
-      position: relative;
-      margin-bottom: 12px;
+      margin-top: 10px;
       transition: height 0.1s;
     }
     #progress-track:hover { height: 6px; }
@@ -243,33 +284,14 @@
       transition: width 0.5s linear;
     }
 
-    #iframe-controls {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    #iframe-controls button {
-      background: none;
-      border: 1px solid rgba(255,255,255,0.35);
-      color: #fff;
-      padding: 5px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: background 0.15s;
-      white-space: nowrap;
-    }
-    #iframe-controls button:hover { background: rgba(255,255,255,0.18); }
-
     #iframe-time {
-      font-size: 13px;
-      color: rgba(255,255,255,0.82);
+      font-size: 12px;
+      color: rgba(255,255,255,0.70);
       font-variant-numeric: tabular-nums;
-      min-width: 120px;
+      margin-left: auto;
     }
 
-    /* STATUS OVERLAY */
+    /* ── STATUS OVERLAY ──────────────────────────────────────────── */
     #video-status {
       display: none;
       position: absolute;
@@ -308,7 +330,7 @@
       animation: spin 0.8s linear infinite;
     }
 
-    /* CHAT */
+    /* ── CHAT ────────────────────────────────────────────────────── */
     #chat-panel {
       width: 300px;
       flex-shrink: 0;
@@ -391,7 +413,7 @@
     }
     #chat-send:hover { background: var(--accent-hover); }
 
-    /* OVERLAY TAP TO START */
+    /* ── TAP TO START (mode direct, autoplay bloqué) ─────────────── */
     #play-overlay {
       display: none;
       position: fixed;
@@ -430,48 +452,58 @@
 </head>
 <body>
 
-  <!-- JOIN SCREEN -->
+  <!-- ── JOIN SCREEN ──────────────────────────────────────────────── -->
   <div id="join-screen">
     <div class="join-card">
       <div class="join-logo">🎬</div>
       <h1 class="join-title">Watch Party</h1>
-      <p class="join-subtitle">Regardez des vidéos ensemble en temps réel</p>
+      <p class="join-subtitle" id="join-subtitle">Regardez des vidéos ensemble en temps réel</p>
+
+      <!-- Notice affichée seulement en mode guest -->
+      <div class="guest-notice" id="guest-notice" style="display:none">
+        Tu as été invité dans une room.<br>
+        Entre juste ton <strong>prénom</strong> pour rejoindre.
+      </div>
 
       <div class="form-group">
-        <label class="form-label" for="input-name">Ton nom</label>
+        <label class="form-label" for="input-name">Ton prénom</label>
         <input id="input-name" class="form-input" type="text"
-               placeholder="Viewer" maxlength="30" autocomplete="off" />
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="input-room">ID de la room</label>
-        <input id="input-room" class="form-input" type="text"
-               placeholder="room-1" maxlength="50" autocomplete="off" />
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="input-url">URL de la vidéo</label>
-        <input id="input-url" class="form-input" type="url"
-               placeholder="Rumble, YouTube, Vimeo… ou lien .mp4/.m3u8 direct"
-               autocomplete="off" />
-        <p class="url-hint">
-          <span class="ok">✅</span> rumble.com/v4wvj99…&nbsp;&nbsp;
-          <span class="ok">✅</span> youtube.com/watch?v=…&nbsp;&nbsp;
-          <span class="ok">✅</span> vimeo.com/…&nbsp;&nbsp;
-          <span class="ok">✅</span> film.mp4
-        </p>
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="input-duration">
-          Durée de la vidéo (minutes, facultatif)
-        </label>
-        <input id="input-duration" class="form-input" type="number"
-               placeholder="ex: 90" min="0" max="600" />
+               placeholder="ex: Alex" maxlength="30" autocomplete="off" />
       </div>
 
-      <button class="btn-join" onclick="joinParty()">Rejoindre la party 🎉</button>
+      <!-- Champs host seulement -->
+      <div id="host-fields">
+        <div class="form-group">
+          <label class="form-label" for="input-room">ID de la room</label>
+          <input id="input-room" class="form-input" type="text"
+                 placeholder="ex: room-amis" maxlength="50" autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="input-url">URL de la vidéo</label>
+          <input id="input-url" class="form-input" type="url"
+                 placeholder="Rumble, YouTube, Vimeo… ou .mp4 direct"
+                 autocomplete="off" />
+          <p class="url-hint">
+            <span class="ok">✅</span> rumble.com/v4wvj99…&nbsp;
+            <span class="ok">✅</span> youtube.com/watch?v=…&nbsp;
+            <span class="ok">✅</span> vimeo.com/…&nbsp;
+            <span class="ok">✅</span> film.mp4
+          </p>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="input-duration">
+            Durée en minutes <span style="color:var(--text-muted)">(facultatif — pour la barre)</span>
+          </label>
+          <input id="input-duration" class="form-input" type="number"
+                 placeholder="ex: 90" min="0" max="600" />
+        </div>
+      </div>
+
+      <button class="btn-join" id="btn-join" onclick="joinParty()">Créer la party 🎬</button>
     </div>
   </div>
 
-  <!-- PLAYER SCREEN -->
+  <!-- ── PLAYER SCREEN ─────────────────────────────────────────────── -->
   <div id="player-screen">
     <div id="topbar">
       <div class="topbar-left">
@@ -488,29 +520,34 @@
     <div id="main-area">
       <div id="video-container">
 
+        <!-- Mode DIRECT : <video> natif -->
         <video id="video-direct" controls preload="metadata"></video>
 
+        <!-- Mode IFRAME : Rumble / YouTube / Vimeo -->
         <div id="iframe-wrapper">
           <iframe id="video-iframe" src="about:blank" frameborder="0"
                   allowfullscreen allow="autoplay; fullscreen; picture-in-picture"></iframe>
+          <!-- Contrôles sync en HAUT (ne gêne pas les contrôles natifs en bas) -->
           <div id="iframe-overlay">
-            <div id="progress-track" onclick="handleProgressClick(event)">
-              <div id="progress-fill"></div>
-            </div>
             <div id="iframe-controls">
-              <button id="iframe-play-btn"  onclick="iframePlay()">▶</button>
-              <button id="iframe-pause-btn" onclick="iframePause()" style="display:none">⏸</button>
-              <span   id="iframe-time">0:00 / --:--</span>
+              <span class="sync-label">Sync</span>
+              <button id="iframe-play-btn"  onclick="iframePlay()">▶ Play</button>
+              <button id="iframe-pause-btn" onclick="iframePause()" style="display:none">⏸ Pause</button>
               <button onclick="iframeSeek(-10)">−10s</button>
               <button onclick="iframeSeek(+10)">+10s</button>
+              <span id="iframe-time">0:00 / --:--</span>
+            </div>
+            <div id="progress-track" onclick="handleProgressClick(event)">
+              <div id="progress-fill"></div>
             </div>
           </div>
         </div>
 
+        <!-- Status overlay (chargement / erreur / attente) -->
         <div id="video-status" class="visible">
           <div class="vstatus-icon">🎬</div>
-          <div class="vstatus-title">En attente d'une vidéo</div>
-          <div class="vstatus-sub">Remplis le formulaire et rejoins la party.</div>
+          <div class="vstatus-title">En attente…</div>
+          <div class="vstatus-sub">Connexion en cours.</div>
         </div>
 
       </div>
@@ -527,12 +564,30 @@
     </div>
   </div>
 
+  <!-- Tap to start (autoplay bloqué, mode direct) -->
   <div id="play-overlay">
     <button id="overlay-btn">▶ Tap to start</button>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
+  /* ══════════════════════════════════════════════════════════════
+     MODE GUEST — détection via ?room= dans l'URL
+  ══════════════════════════════════════════════════════════════ */
+  var _urlParams   = new URLSearchParams(location.search);
+  var _guestRoomId = _urlParams.get('room');  // null si host
+  var _isGuest     = !!_guestRoomId;
+
+  if (_isGuest) {
+    document.getElementById('host-fields').style.display   = 'none';
+    document.getElementById('guest-notice').style.display  = 'block';
+    document.getElementById('btn-join').textContent         = 'Rejoindre 🎉';
+    document.getElementById('join-subtitle').textContent    = 'Tu as été invité à une watch party !';
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     DÉTECTION URL
+  ══════════════════════════════════════════════════════════════ */
   function detectUrlType(url) {
     try {
       var u = new URL(url);
@@ -573,15 +628,25 @@
     }
   }
 
+  /* ══════════════════════════════════════════════════════════════
+     BUILD EMBED URL AVEC POSITION + AUTOPLAY
+  ══════════════════════════════════════════════════════════════ */
   function buildEmbedUrl(mode, videoId, position, isPlaying) {
-    var t = Math.floor(Math.max(0, position || 0));
+    var t  = Math.floor(Math.max(0, position || 0));
     var ap = isPlaying ? 1 : 0;
-    if (mode === 'rumble')  return 'https://rumble.com/embed/' + videoId + '/?pub=&start=' + t + (isPlaying ? '&autoplay=1' : '');
-    if (mode === 'youtube') return 'https://www.youtube.com/embed/' + videoId + '?start=' + t + '&autoplay=' + ap + '&enablejsapi=1&rel=0&modestbranding=1';
-    if (mode === 'vimeo')   return 'https://player.vimeo.com/video/' + videoId + '?autoplay=' + ap + '#t=' + t + 's';
+    if (mode === 'rumble')
+      return 'https://rumble.com/embed/' + videoId + '/?pub=&start=' + t + (isPlaying ? '&autoplay=1' : '');
+    if (mode === 'youtube')
+      return 'https://www.youtube.com/embed/' + videoId +
+             '?start=' + t + '&autoplay=' + ap + '&enablejsapi=1&rel=0&modestbranding=1';
+    if (mode === 'vimeo')
+      return 'https://player.vimeo.com/video/' + videoId + '?autoplay=' + ap + '#t=' + t + 's';
     return null;
   }
 
+  /* ══════════════════════════════════════════════════════════════
+     WatchPartySync — MODE DIRECT (<video> natif)
+  ══════════════════════════════════════════════════════════════ */
   class WatchPartySync {
     constructor({ videoEl, socket, roomId }) {
       this.video  = videoEl;
@@ -620,7 +685,7 @@
     }
     _setupSocketListeners() {
       this.socket.on('sync', ({ isPlaying, position, sentAt, isHost }) => {
-        this._isHost = isHost;
+        this._isHost = !!isHost;
         var lat = (Date.now() - sentAt) / 1000;
         this._apply({ isPlaying, position: isPlaying ? position + lat : position });
       });
@@ -673,7 +738,7 @@
           v.pause();
         }
       } catch (err) {
-        console.warn('[Sync]', err);
+        console.warn('[Sync direct]', err);
       } finally {
         setTimeout(() => { this._isApplyingRemote = false; }, 150);
       }
@@ -709,8 +774,11 @@
     }
   }
 
+  /* ══════════════════════════════════════════════════════════════
+     IframeSyncManager — MODE IFRAME (Rumble / YouTube / Vimeo)
+  ══════════════════════════════════════════════════════════════ */
   class IframeSyncManager {
-    constructor({ socket, roomId, videoId, mode, duration }) {
+    constructor({ socket, roomId, videoId, mode, duration, initialState }) {
       this.socket      = socket;
       this.roomId      = roomId;
       this.videoId     = videoId;
@@ -718,10 +786,12 @@
       this._duration   = duration || 0;
       this._isPlaying  = false;
       this._position   = 0;
-      this._startedAt  = 0;
+      this._startedAt  = Date.now();
       this._clockTimer = null;
       this._setupSocket();
       this._startClock();
+      // Appliquer l'état initial reçu du serveur
+      if (initialState) this._apply(initialState);
     }
     getCurrentPosition() {
       if (!this._isPlaying) return this._position;
@@ -732,7 +802,7 @@
     seek(p) { this.socket.emit('seek',  { roomId: this.roomId, position: Math.max(0, p), isPlaying: this._isPlaying }); }
     seekRelative(d) { this.seek(this.getCurrentPosition() + d); }
     _apply({ isPlaying, position, sentAt }) {
-      var lat = (Date.now() - (sentAt || Date.now())) / 1000;
+      var lat    = (Date.now() - (sentAt || Date.now())) / 1000;
       var target = isPlaying ? position + lat : position;
       this._isPlaying = isPlaying;
       this._position  = target;
@@ -748,13 +818,13 @@
       var pb = document.getElementById('iframe-play-btn');
       var pp = document.getElementById('iframe-pause-btn');
       if (pb) pb.style.display = isPlaying ? 'none' : '';
-      if (pp) pp.style.display = isPlaying ? '' : 'none';
+      if (pp) pp.style.display = isPlaying ? ''     : 'none';
     }
     _setupSocket() {
-      this.socket.on('sync',  (d) => this._apply(d));
+      // Les guests reçoivent ces events APRÈS que le manager est créé :
       this.socket.on('play',  (d) => this._apply({ isPlaying: true,  position: d.position, sentAt: d.sentAt }));
       this.socket.on('pause', (d) => this._apply({ isPlaying: false, position: d.position, sentAt: d.sentAt || Date.now() }));
-      this.socket.on('seek',  (d) => this._apply(d));
+      this.socket.on('seek',  (d) => this._apply({ isPlaying: d.isPlaying, position: d.position, sentAt: d.sentAt }));
       this.socket.on('video_set', (d) => {
         this.mode = d.mode; this.videoId = d.videoId;
         this._isPlaying = false; this._position = 0;
@@ -772,10 +842,13 @@
     }
     destroy() {
       clearInterval(this._clockTimer);
-      ['sync','play','pause','seek','video_set'].forEach(e => this.socket.off(e));
+      ['play','pause','seek','video_set'].forEach(e => this.socket.off(e));
     }
   }
 
+  /* ══════════════════════════════════════════════════════════════
+     HELPERS
+  ══════════════════════════════════════════════════════════════ */
   function formatTime(sec) {
     sec = Math.floor(sec || 0);
     var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
@@ -784,9 +857,10 @@
       : m + ':' + String(s).padStart(2,'0');
   }
 
-  function setStatusLoading() {
+  function setStatusLoading(msg) {
     var el = document.getElementById('video-status');
-    el.innerHTML = '<div class="vstatus-spinner"></div><div class="vstatus-title">Chargement…</div>';
+    el.innerHTML = '<div class="vstatus-spinner"></div>' +
+      '<div class="vstatus-title">' + (msg || 'Chargement…') + '</div>';
     el.classList.add('visible');
   }
   function setStatus(icon, title, sub, pills) {
@@ -794,14 +868,17 @@
     el.innerHTML = '<div class="vstatus-icon">' + icon + '</div>' +
       '<div class="vstatus-title">' + title + '</div>' +
       (sub ? '<div class="vstatus-sub">' + sub + '</div>' : '') +
-      (pills && pills.length ? '<div class="vstatus-pills">' + pills.map(function(p){ return '<span class="vstatus-pill">' + p + '</span>'; }).join('') + '</div>' : '');
+      (pills && pills.length
+        ? '<div class="vstatus-pills">' + pills.map(function(p){
+            return '<span class="vstatus-pill">' + p + '</span>';
+          }).join('') + '</div>' : '');
     el.classList.add('visible');
   }
   function hideStatus() { document.getElementById('video-status').classList.remove('visible'); }
 
   function addMessage(type, name, msg, time) {
     var box = document.getElementById('chat-messages');
-    var wasAtBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+    var atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
     var el = document.createElement('div');
     el.className = type === 'system' ? 'msg-system' : 'msg-chat';
     if (type === 'system') {
@@ -812,38 +889,20 @@
         '<span class="msg-text">' + esc(msg)  + '</span>';
     }
     box.appendChild(el);
-    if (wasAtBottom) box.scrollTop = box.scrollHeight;
+    if (atBottom) box.scrollTop = box.scrollHeight;
   }
 
   function esc(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  // Pré-remplir le room ID depuis ?room=xxx dans l'URL
-  (function() {
-    var p = new URLSearchParams(location.search);
-    var r = p.get('room');
-    if (r) document.getElementById('input-room').value = r;
-  })();
-
-  var syncMgr = null, iframeMgr = null;
-  var _currentRoomId = null;
-
-  function shareRoom() {
-    if (!_currentRoomId) return;
-    var link = location.origin + location.pathname + '?room=' + encodeURIComponent(_currentRoomId);
-    navigator.clipboard.writeText(link).then(function() {
-      var btn = document.getElementById('share-btn');
-      btn.textContent = '✅ Lien copié !';
-      btn.classList.add('copied');
-      setTimeout(function() {
-        btn.textContent = '🔗 Inviter un ami';
-        btn.classList.remove('copied');
-      }, 2000);
-    }).catch(function() {
-      prompt('Copie ce lien et envoie-le à ton ami :', link);
-    });
-  }
+  /* ══════════════════════════════════════════════════════════════
+     GLOBALS + CONTRÔLES IFRAME
+  ══════════════════════════════════════════════════════════════ */
+  var syncMgr    = null;
+  var iframeMgr  = null;
+  var _roomId    = null;
 
   function iframePlay()  { if (iframeMgr) iframeMgr.play(); }
   function iframePause() { if (iframeMgr) iframeMgr.pause(); }
@@ -857,122 +916,169 @@
     iframeMgr.seek(ratio * (iframeMgr._duration > 0 ? iframeMgr._duration : 7200));
   }
 
+  function shareRoom() {
+    if (!_roomId) return;
+    var link = location.origin + location.pathname + '?room=' + encodeURIComponent(_roomId);
+    navigator.clipboard.writeText(link).then(function() {
+      var btn = document.getElementById('share-btn');
+      btn.textContent = '✅ Lien copié !';
+      btn.classList.add('copied');
+      setTimeout(function() {
+        btn.textContent = '🔗 Inviter un ami';
+        btn.classList.remove('copied');
+      }, 2000);
+    }).catch(function() {
+      prompt('Copie ce lien pour inviter un ami :', link);
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     CHARGER LE PLAYER depuis les données serveur
+     Appelé une seule fois quand on connaît la vidéo à jouer.
+  ══════════════════════════════════════════════════════════════ */
+  function initPlayer(syncData, socket, roomId, durationSec) {
+    var mode     = syncData.mode;
+    var videoId  = syncData.videoId;
+    var embedUrl = syncData.embedUrl;
+
+    if (!mode || mode === 'direct') {
+      /* ── Mode direct (<video>) ─────────────────────────────── */
+      document.getElementById('video-direct').style.display   = 'block';
+      document.getElementById('iframe-wrapper').style.display = 'none';
+
+      var video = document.getElementById('video-direct');
+      setStatusLoading('Chargement de la vidéo…');
+      video.addEventListener('loadstart', function() { setStatusLoading('Chargement…'); });
+      video.addEventListener('canplay',   hideStatus);
+      video.addEventListener('error', function() {
+        var code = video.error && video.error.code;
+        if (code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+          setStatus('🚫','Format non supporté',
+            'Colle une URL Rumble, YouTube ou un fichier .mp4 direct.',
+            ['.mp4','.webm','.m3u8']);
+        } else if (code === MediaError.MEDIA_ERR_NETWORK) {
+          setStatus('📡','Erreur réseau','Vérifie que le lien est public.');
+        } else {
+          setStatus('⚠️','Impossible de charger','Vérifie le lien.');
+        }
+      });
+      video.src = embedUrl;
+
+      syncMgr = new WatchPartySync({ videoEl: video, socket: socket, roomId: roomId });
+
+      document.getElementById('overlay-btn').addEventListener('click', function() {
+        document.getElementById('play-overlay').style.display = 'none';
+        if (syncMgr) syncMgr._onUserGesture();
+        video.play().catch(function(){});
+      });
+
+    } else {
+      /* ── Mode iframe (Rumble / YouTube / Vimeo) ────────────── */
+      document.getElementById('video-direct').style.display   = 'none';
+      document.getElementById('iframe-wrapper').style.display = 'block';
+      setStatusLoading('Chargement de la vidéo…');
+
+      var iframe = document.getElementById('video-iframe');
+      // Charger à la position actuelle avec l'état de lecture actuel
+      var pos      = syncData.isPlaying
+        ? syncData.position + (Date.now() - syncData.sentAt) / 1000
+        : syncData.position;
+      iframe.src = buildEmbedUrl(mode, videoId, pos, syncData.isPlaying);
+      iframe.addEventListener('load', hideStatus, { once: true });
+      setTimeout(hideStatus, 5000);
+
+      iframeMgr = new IframeSyncManager({
+        socket:       socket,
+        roomId:       roomId,
+        videoId:      videoId,
+        mode:         mode,
+        duration:     durationSec,
+        initialState: syncData,   // état initial directement depuis le serveur
+      });
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     JOIN PARTY
+  ══════════════════════════════════════════════════════════════ */
+  // Enter dans n'importe quel champ
   ['input-name','input-room','input-url','input-duration'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.addEventListener('keydown', function(e) { if (e.key === 'Enter') joinParty(); });
   });
 
   function joinParty() {
-    var name        = (document.getElementById('input-name').value.trim() || 'Viewer').slice(0,30);
-    var roomId      =  document.getElementById('input-room').value.trim() || 'room-1';
-    var rawUrl      =  document.getElementById('input-url').value.trim();
+    var name = (document.getElementById('input-name').value.trim() || 'Viewer').slice(0,30);
+
+    /* ── Cas GUEST : room ID vient de l'URL ─────────────────── */
+    if (_isGuest) {
+      var roomId = _guestRoomId;
+      _roomId = roomId;
+      startSession(name, roomId, null, null, 0);
+      return;
+    }
+
+    /* ── Cas HOST : valider les champs ──────────────────────── */
+    var roomId      = document.getElementById('input-room').value.trim() || ('room-' + Math.random().toString(36).slice(2,7));
+    var rawUrl      = document.getElementById('input-url').value.trim();
     var durationSec = (parseFloat(document.getElementById('input-duration').value) || 0) * 60;
 
     if (!rawUrl) { alert('Entre une URL de vidéo.'); return; }
 
     var detected = detectUrlType(rawUrl);
     if (detected.type === 'unknown' || !detected.embedUrl) {
-      alert('URL non reconnue. Colle une URL Rumble, YouTube, Vimeo, ou un lien .mp4/.m3u8 direct.');
+      alert('URL non reconnue. Colle une URL Rumble, YouTube, Vimeo, ou un fichier .mp4 direct.');
       return;
     }
 
-    _currentRoomId = roomId;
-    document.getElementById('join-screen').style.display   = 'none';
-    document.getElementById('player-screen').style.display = 'flex';
-    document.getElementById('room-badge').textContent       = '🎬 ' + roomId;
-    document.getElementById('share-btn').style.display      = 'inline-flex';
-    // Mettre l'URL à jour sans recharger (pour que le lien de partage fonctionne)
-    history.replaceState(null, '', '?room=' + encodeURIComponent(roomId));
+    _roomId = roomId;
+    document.getElementById('btn-join').disabled = true;
 
-    var socket = io();
+    if (detected.type === 'rumble') {
+      // Résoudre l'embed ID Rumble avant d'ouvrir le salon
+      setStatusLoading('Résolution Rumble…');
+      document.getElementById('join-screen').style.display   = 'none';
+      document.getElementById('player-screen').style.display = 'flex';
+      setupTopbar(roomId);
 
-    if (detected.type === 'direct') {
-      document.getElementById('video-direct').style.display   = 'block';
-      document.getElementById('iframe-wrapper').style.display = 'none';
-      var video = document.getElementById('video-direct');
-      setStatusLoading();
-      video.addEventListener('loadstart', setStatusLoading);
-      video.addEventListener('canplay',   hideStatus);
-      video.addEventListener('error', function() {
-        var code = video.error && video.error.code;
-        if (code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
-          setStatus('🚫','Format non supporté','Ce lien ne peut pas être lu directement. Colle une URL Rumble, YouTube ou un .mp4 direct.',['.mp4','.webm','.m3u8']);
-        } else if (code === MediaError.MEDIA_ERR_NETWORK) {
-          setStatus('📡','Erreur réseau','Vérifie que le lien est public.');
-        } else {
-          setStatus('⚠️','Impossible de charger','Vérifie le lien ou essaie un autre format.');
-        }
-      });
-      video.src = detected.embedUrl;
-      syncMgr = new WatchPartySync({ videoEl: video, socket: socket, roomId: roomId });
-      document.getElementById('overlay-btn').addEventListener('click', function() {
-        document.getElementById('play-overlay').style.display = 'none';
-        if (syncMgr) syncMgr._onUserGesture();
-        video.play().catch(function(){});
-      });
-    } else {
-      document.getElementById('video-direct').style.display   = 'none';
-      document.getElementById('iframe-wrapper').style.display = 'block';
-      setStatusLoading();
-
-      // Chargement de l'iframe une fois l'ID vidéo connu
-      function loadIframe(videoId, mode) {
-        var iframe = document.getElementById('video-iframe');
-        iframe.src = buildEmbedUrl(mode, videoId, 0, false);
-        iframe.addEventListener('load', hideStatus, { once: true });
-        setTimeout(hideStatus, 5000);
-        iframeMgr = new IframeSyncManager({
-          socket: socket, roomId: roomId,
-          videoId: videoId, mode: mode, duration: durationSec,
+      fetch('/api/rumble-embed?url=' + encodeURIComponent(rawUrl))
+        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function(data) {
+          if (data.embedId) { detected.videoId = data.embedId; detected.embedUrl = 'https://rumble.com/embed/' + data.embedId + '/'; }
+          startSession(name, roomId, rawUrl, detected, durationSec);
+        })
+        .catch(function(err) {
+          console.warn('[Rumble oEmbed]', err);
+          // Fallback : essayer avec l'ID de page
+          startSession(name, roomId, rawUrl, detected, durationSec);
         });
-      }
-
-      // Pour Rumble : les IDs de page (v4wv296) ≠ IDs d'embed (v4ue2sl)
-      // On passe par /api/rumble-embed qui appelle l'oEmbed Rumble pour résoudre le vrai ID
-      if (detected.type === 'rumble') {
-        fetch('/api/rumble-embed?url=' + encodeURIComponent(rawUrl))
-          .then(function(r) {
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            return r.json();
-          })
-          .then(function(data) {
-            if (data.embedId) {
-              detected.videoId  = data.embedId;
-              detected.embedUrl = data.embedUrl;
-            }
-            loadIframe(detected.videoId, detected.type);
-            rumbleReady = true;
-            tryEmitSetVideo();
-          })
-          .catch(function(err) {
-            console.warn('[Rumble oEmbed]', err);
-            setStatus('⚠️', 'Rumble introuvable',
-              'Impossible de charger l\'embed. Vérifie que le lien est public et accessible.', []);
-          });
-      } else {
-        loadIframe(detected.videoId, detected.type);
-      }
+    } else {
+      document.getElementById('join-screen').style.display   = 'none';
+      document.getElementById('player-screen').style.display = 'flex';
+      setupTopbar(roomId);
+      startSession(name, roomId, rawUrl, detected, durationSec);
     }
+  }
 
-    // Pour Rumble : s'assurer que socket ET fetch sont prêts avant d'émettre set_video
-    var rumbleReady  = detected.type !== 'rumble'; // true si pas Rumble
-    var socketJoined = false;
+  function setupTopbar(roomId) {
+    document.getElementById('room-badge').textContent = '🎬 ' + roomId;
+    history.replaceState(null, '', '?room=' + encodeURIComponent(roomId));
+    setStatusLoading('Connexion…');
+  }
 
-    function tryEmitSetVideo() {
-      if (socketJoined && rumbleReady && detected.type !== 'direct') {
-        socket.emit('set_video', { roomId: roomId, url: rawUrl,
-          mode: detected.type, videoId: detected.videoId, embedUrl: detected.embedUrl });
-      }
-    }
+  /* ══════════════════════════════════════════════════════════════
+     startSession — connexion socket + gestion sync
+  ══════════════════════════════════════════════════════════════ */
+  function startSession(name, roomId, rawUrl, detected, durationSec) {
+    var socket       = io();
+    var connected    = false;
+    var playerLoaded = false;
 
-    var connected = false;
     socket.on('connect', function() {
       socket.emit('join', { roomId: roomId });
-      if (!connected) {
-        socketJoined = true;
-        tryEmitSetVideo();
-      }
+
       if (connected) {
+        // Reconnexion
         document.getElementById('reconnect-badge').style.display = 'none';
         addMessage('system','','✅ Reconnecté.','');
       }
@@ -984,19 +1090,78 @@
       addMessage('system','','Connexion perdue, reconnexion…','');
     });
 
+    /* ── Gestion du SYNC ────────────────────────────────────── */
+    socket.on('sync', function(data) {
+      // Badge host
+      document.getElementById('host-badge').style.display = data.isHost ? 'inline-flex' : 'none';
+      if (syncMgr) syncMgr._isHost = !!data.isHost;
+
+      if (playerLoaded) return; // déjà chargé, les managers gèrent le reste
+
+      /* Premier sync : décider quelle vidéo charger */
+
+      if (data.videoId || (data.mode === 'direct' && data.embedUrl)) {
+        // Le serveur connaît déjà la vidéo (room existante, ou host vient de set_video)
+        playerLoaded = true;
+        initPlayer(data, socket, roomId, durationSec);
+        return;
+      }
+
+      if (!_isGuest && detected) {
+        // Host : la room est vide, on push notre vidéo
+        playerLoaded = true;
+        var payload = {
+          roomId:   roomId,
+          url:      rawUrl,
+          mode:     detected.type,
+          videoId:  detected.videoId,
+          embedUrl: detected.embedUrl,
+        };
+        socket.emit('set_video', payload);
+        // Charger localement avec l'état initial vide
+        initPlayer({
+          mode:      detected.type,
+          videoId:   detected.videoId,
+          embedUrl:  detected.embedUrl,
+          isPlaying: false,
+          position:  0,
+          sentAt:    Date.now(),
+          isHost:    true,
+        }, socket, roomId, durationSec);
+        return;
+      }
+
+      // Guest : pas encore de vidéo dans la room → attendre
+      setStatus('⏳', 'En attente de la vidéo…', "L'hôte n'a pas encore lancé de vidéo.");
+    });
+
     socket.on('you_are_host', function() {
       if (syncMgr) syncMgr._isHost = true;
       document.getElementById('host-badge').style.display = 'inline-flex';
     });
-    socket.on('sync', function(data) {
-      document.getElementById('host-badge').style.display = data.isHost ? 'inline-flex' : 'none';
+
+    // Un guest rejoint après que la vidéo est déjà changée
+    socket.on('video_set', function(data) {
+      if (playerLoaded) return; // déjà chargé
+      playerLoaded = true;
+      initPlayer({
+        mode:      data.mode,
+        videoId:   data.videoId,
+        embedUrl:  data.embedUrl,
+        isPlaying: false,
+        position:  0,
+        sentAt:    Date.now(),
+        isHost:    false,
+      }, socket, roomId, durationSec);
     });
+
     socket.on('viewer_count', function(data) {
       document.getElementById('viewer-count').textContent = '👥 ' + data.count;
     });
     socket.on('system_msg', function(data) { addMessage('system','',data.msg,''); });
     socket.on('chat', function(data) { addMessage('chat',data.name,data.msg,data.time); });
 
+    /* ── Chat ────────────────────────────────────────────────── */
     var sendChat = function() {
       var input = document.getElementById('chat-input');
       var msg = input.value.trim(); if (!msg) return;
